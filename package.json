@@ -2,16 +2,31 @@
   "name": "fitbuddy",
   "version": "0.1.0",
   "private": true,
+  "hasInstallScript": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "seed": "tsx scripts/seed-firestore.ts"
   },
   "dependencies": {
+    "@google-cloud/vertexai": "^1.10.0",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.2.3",
+    "firebase-admin": "^13.6.0",
+    "lucide-react": "^0.556.0",
     "next": "16.0.7",
+    "next-auth": "^5.0.0-beta.30",
+    "openai": "^6.10.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
