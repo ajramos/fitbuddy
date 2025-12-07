@@ -1,6 +1,6 @@
 
 import { UserProfileInput, WeeklyPlan, ExerciseDefinition } from './types';
-import { getModel } from '@/lib/agent/vertex-client';
+import { getPlanModel } from '@/lib/agent/vertex-client';
 import { SchemaType } from '@google-cloud/vertexai';
 import { db } from '@/lib/db/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -8,13 +8,21 @@ import { Timestamp } from 'firebase-admin/firestore';
 export async function generateTrainingPlan(
     profile: UserProfileInput
 ): Promise<WeeklyPlan> {
-    const model = getModel();
-    console.log("Generating plan with V2 logic (robust JSON)");
+    const model = getPlanModel(); // Use comprehensive Pro model for plan generation
+
+    const userLanguage = profile.language || 'en';
+    const languageInstruction = userLanguage === 'es'
+        ? `CRITICAL: You MUST generate ALL content in SPANISH. Exercise names, descriptions, section labels, everything must be in Spanish.`
+        : `Generate all content in English.`;
+
+    console.log(`Generating plan in ${userLanguage.toUpperCase()} for ${profile.experienceLevel} level`);
 
     const prompt = `
     You are an expert strength and conditioning coach.
     Create a 1-week functional training plan (a repeating microcycle) for the following user.
     The plan should be detailed and outputted as pure JSON.
+    
+    ${languageInstruction}
     
     User Profile:
     - Name: ${profile.name || 'User'}
@@ -30,11 +38,12 @@ export async function generateTrainingPlan(
     - Preferences: ${profile.stylePreferences?.circuitsPreference || 'Mixed'} circuits, ${profile.stylePreferences?.runningFinisherPreference || 'occasional'} to running.
 
     CRITICAL INSTRUCTIONS:
-    1. **Real Exercises Only**: Use standard, verifiable exercise names.
-    2. **Exact Frequency**: Generate exactly ${profile.sessionsPerWeek} workout days.
-    3. **Repeating Cycle**: This 1 week will be repeated.
-    4. **CONCISENESS**: Descriptions MUST be short (maximum 15 words). Notes should be empty unless safety-critical.
-    5. **Details**: Provide: name, movementPattern, mainMuscles, requiredEquipment, recommendedLevel, description, sets, reps, durationSeconds, restSeconds, notes.
+    1. **Language**: ${userLanguage === 'es' ? 'ALL text must be in SPANISH (exercise names, descriptions, labels)' : 'ALL text must be in English'}
+    2. **Real Exercises Only**: Use standard, verifiable exercise names.
+    3. **Exact Frequency**: Generate exactly ${profile.sessionsPerWeek} workout days.
+    4. **Repeating Cycle**: This 1 week will be repeated.
+    5. **CONCISENESS**: Descriptions MUST be short (maximum 15 words). Notes should be empty unless safety-critical.
+    6. **Details**: Provide: name, movementPattern, mainMuscles, requiredEquipment, recommendedLevel, description, sets, reps, durationSeconds, restSeconds, notes.
 
     Output Schema (JSON):
     {
@@ -42,17 +51,17 @@ export async function generateTrainingPlan(
       "days": [
         {
           "dayIndex": 1,
-          "label": "Monday",
-          "focus": "Full Body Strength",
+          "label": "${userLanguage === 'es' ? 'Lunes' : 'Monday'}",
+          "focus": "${userLanguage === 'es' ? 'Fuerza de Cuerpo Completo' : 'Full Body Strength'}",
           "blocks": [
             {
               "type": "warmup",
-              "label": "Warm Up",
+              "label": "${userLanguage === 'es' ? 'Calentamiento' : 'Warm Up'}",
               "exercises": [...]
             },
              {
               "type": "main",
-              "label": "Strength Block",
+              "label": "${userLanguage === 'es' ? 'Bloque Principal' : 'Strength Block'}",
               "exercises": [...]
             }
           ]

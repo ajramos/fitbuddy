@@ -1,5 +1,5 @@
 
-import { getModel } from './vertex-client';
+import { getConversationModel } from './vertex-client';
 import { tools } from './tools';
 import { Content, GenerateContentRequest, Part } from '@google-cloud/vertexai';
 import { UserProfileInput } from '@/lib/engine/types';
@@ -18,20 +18,25 @@ You are an expert functional training coach creating a personalized plan for a u
 Your goal is to have a natural conversation to build a user profile.
 Don't ask all questions at once. Ask 1-2 relevant questions at a time.
 
-CRITICAL: You MUST explicitly ask about "Limitations or Injuries" before finishing the profile. Do not assume none.
+CRITICAL REQUIREMENTS - YOU MUST GATHER ALL OF THESE:
+1. Primary Goal (fat_loss, muscle_gain, recomposition) - REQUIRED
+2. Training Frequency (sessions/week) - REQUIRED
+3. Duration (minutes per session) - REQUIRED
+4. Equipment available (be specific: kettlebells, dumbbells, bands, etc.) - REQUIRED
+5. Experience Level (beginner, intermediate, advanced) - REQUIRED
+6. Limitations/Injuries (MUST ASK EXPLICITLY - do not assume none) - REQUIRED
+7. Circuit Training Preference (love, neutral, hate) - REQUIRED
+8. Running Finisher Preference (yes, conditional, no) - REQUIRED
 
-You need to gather:
-1. Primary Goal (fat_loss, muscle_gain, recomposition)
-2. Training Frequency (sessions/week)
-3. Duration (minutes)
-4. Equipment available
-5. Experience Level
-6. Limitations (injuries) - MUST ASK EXPLICITLY
-7. Style preferences (circuits, running)
+IMPORTANT: You MUST ask about BOTH:
+- Whether they like circuit-style training (multiple exercises back-to-back)
+- Whether they want to finish sessions with running/cardio
 
-When the user provides information, call 'updateUserProfile'.
+Do not skip these questions. They are essential for plan quality.
+
+When the user provides information, call 'updateUserProfile' with the relevant fields.
 If the user's input is vague, infer the best match but confirm with them.
-Once you have enough info, summarize it and ask for confirmation.
+Once you have ALL required info, summarize it and ask for confirmation.
 
 CRITICAL: When the user confirms the summary (e.g., "yes", "correct", "go ahead"), you MUST call the 'generatePlan' function immediately. Do not just say you are ready. YOU MUST CALL THE FUNCTION.
 `;
@@ -42,19 +47,58 @@ export async function processUserMessage(
     history: Content[],
     currentProfile: Partial<UserProfileInput>
 ): Promise<AgentResponse> {
-    const model = getModel();
+    const model = getConversationModel(); // Use fast Flash model for conversation
 
     const languageContext = currentProfile.language === 'es'
         ? "You must interact with the user primarily in Spanish, but keep technical fitness terms in English if appropriate."
         : "You must interact with the user in English.";
 
     const nameContext = currentProfile.name ? `The user's name is ${currentProfile.name}. Address them by name occasionally to be friendly.` : "";
+    // Build a context of what USER data we already know (these don't change between plans)
+    const knownUserInfo: string[] = [];
+    const missingUserInfo: string[] = [];
+
+    // USER DATA - Check if we have it stored
+    if (currentProfile.experienceLevel) knownUserInfo.push(`Experience Level: ${currentProfile.experienceLevel}`);
+    else missingUserInfo.push('Experience Level');
+
+    if (currentProfile.equipmentKeys && currentProfile.equipmentKeys.length > 0) knownUserInfo.push(`Equipment: ${currentProfile.equipmentKeys.join(', ')}`);
+    else missingUserInfo.push('Equipment Available');
+
+    if (currentProfile.limitations && currentProfile.limitations.length > 0) knownUserInfo.push(`Limitations: ${currentProfile.limitations.join(', ')}`);
+    else missingUserInfo.push('Limitations/Injuries');
+
+    if (currentProfile.age) knownUserInfo.push(`Age: ${currentProfile.age}`);
+    if (currentProfile.weight) knownUserInfo.push(`Weight: ${currentProfile.weight}kg`);
+    if (currentProfile.height) knownUserInfo.push(`Height: ${currentProfile.height}cm`);
+
+    // PLAN DATA - Always ask for these (they vary per plan)
+    const planDataToAsk = [
+        'Primary Goal (fat_loss, muscle_gain, or recomposition)',
+        'Training Frequency (sessions per week)',
+        'Session Duration (minutes)',
+        'Circuit Training Preference',
+        'Running Finisher Preference'
+    ];
+
+    const userProfileContext = knownUserInfo.length > 0
+        ? `\n\nUSER INFO WE ALREADY HAVE (do NOT ask about these):\n${knownUserInfo.map(i => `- ${i}`).join('\n')}`
+        : '';
+
+    const userMissingContext = missingUserInfo.length > 0
+        ? `\n\nUSER INFO WE STILL NEED:\n${missingUserInfo.map(i => `- ${i}`).join('\n')}`
+        : '';
+
+    const planContext = `\n\nPLAN-SPECIFIC INFO TO ASK (these vary per plan, always ask):\n${planDataToAsk.map(i => `- ${i}`).join('\n')}`;
 
     const DYNAMIC_SYSTEM_INSTRUCTION = `
 ${SYSTEM_INSTRUCTION}
     
 ${nameContext}
 ${languageContext}
+${userProfileContext}
+${userMissingContext}
+${planContext}
     `;
 
     const chat = model.startChat({

@@ -22,24 +22,55 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Profile not found" }, { status: 400 });
     }
 
-    const profileData = profileSnap.data() as UserProfileInput;
+    const profileData = profileSnap.exists ? profileSnap.data() : {};
     const userData = userSnap.exists ? userSnap.data() : {};
 
-    // Merge them
+    // Merge profile data with user data
+    // User data (from users collection) should take priority for user-specific fields
     const profile: UserProfileInput = {
-        ...profileData,
-        ...userData // This overwrites name/age/weight/height if present
+        ...profileData, // Plan-specific data from profiles collection
+        ...userData,    // User-specific data from users collection (experienceLevel, equipment, etc.)
+        // Ensure name is set
+        name: userData.name || profileData.name || session.user.name || 'User'
     };
+
+    console.log('[Plan Generation] Using profile:', {
+        primaryGoal: profile.primaryGoal,
+        experienceLevel: profile.experienceLevel,
+        sessionsPerWeek: profile.sessionsPerWeek,
+        equipmentKeys: profile.equipmentKeys
+    });
 
     // Generate Plan (Generator handles exercise fetching/creation dynamically)
     const plan = await generateTrainingPlan(profile);
+
+    // Localized plan title
+    const goalTitles: Record<string, Record<string, string>> = {
+        en: {
+            fat_loss: "Fat Loss Plan",
+            muscle_gain: "Muscle Gain Plan",
+            recomposition: "Body Recomposition Plan",
+            strength: "Strength Plan",
+            endurance: "Endurance Plan"
+        },
+        es: {
+            fat_loss: "Plan de Pérdida de Grasa",
+            muscle_gain: "Plan de Ganancia Muscular",
+            recomposition: "Plan de Recomposición",
+            strength: "Plan de Fuerza",
+            endurance: "Plan de Resistencia"
+        }
+    };
+
+    const userLanguage = profile.language || 'en';
+    const planTitle = goalTitles[userLanguage]?.[profile.primaryGoal] || `Plan: ${profile.primaryGoal}`;
 
     // Save Plan
     const planRef = db.collection('plans').doc();
     const planData = {
         id: planRef.id,
         userId,
-        title: `Weekly Plan for ${profile.primaryGoal}`, // Better title logic later
+        title: planTitle,
         totalWeeks: plan.totalWeeks,
         days: plan.days,
         profileSnapshot: profile, // Save snapshot for history/validation

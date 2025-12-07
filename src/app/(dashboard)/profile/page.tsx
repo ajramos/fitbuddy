@@ -10,7 +10,18 @@ export default async function ProfilePage() {
     if (!session?.user?.email) redirect("/");
 
     const userDoc = await db.collection('users').doc(session.user.email).get();
-    const userData = userDoc.exists ? userDoc.data() : {};
+    const rawUserData = userDoc.exists ? userDoc.data() : {};
+
+    // Convert Firestore Timestamps to plain objects (Client Components can't handle Timestamps)
+    const userData: any = {};
+    for (const [key, value] of Object.entries(rawUserData || {})) {
+        if (value && typeof value === 'object' && '_seconds' in value) {
+            // Convert Timestamp to Date
+            userData[key] = new Date((value as any)._seconds * 1000);
+        } else {
+            userData[key] = value;
+        }
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
