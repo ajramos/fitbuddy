@@ -15,17 +15,21 @@ import {
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/language-provider";
 
-const items = [
-    { label: "Coach", icon: MessageSquare, href: "/coach" },
-    { label: "My Plan", icon: Calendar, href: "/plan/latest" },
-    { label: "Profile", icon: User, href: "/profile" },
-];
+
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const { dict } = useLanguage();
+
+    const items = [
+        { label: dict.sidebar.coach, icon: MessageSquare, href: "/coach" },
+        { label: dict.sidebar.plan, icon: Calendar, href: "/plan/latest" },
+        { label: dict.sidebar.profile, icon: User, href: "/profile" },
+    ];
 
     return (
         <div className="h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden">
@@ -33,7 +37,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="md:hidden bg-white border-b border-gray-200 p-4 shrink-0 z-50 flex justify-between items-center h-[57px]">
                 <div className="flex items-center gap-2 font-bold text-blue-600">
                     <Dumbbell className="w-6 h-6" />
-                    <span>FitBuddy</span>
+                    <span>{dict.sidebar.title}</span>
                 </div>
                 <button onClick={() => setIsMobileOpen(!isMobileOpen)}>
                     {isMobileOpen ? <X className="w-6 h-6 text-slate-800" /> : <Menu className="w-6 h-6 text-slate-800" />}
@@ -61,7 +65,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     {!isCollapsed && (
                         <div className="flex items-center gap-2 font-bold text-blue-600">
                             <Dumbbell className="w-6 h-6" />
-                            <span>FitBuddy</span>
+                            <span>{dict.sidebar.title}</span>
                         </div>
                     )}
                     <button
@@ -108,7 +112,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         title={isCollapsed ? "Sign Out" : undefined}
                     >
                         <LogOut className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && <span>Sign Out</span>}
+                        {!isCollapsed && <span>{dict.sidebar.signOut}</span>}
                     </button>
                 </div>
             </aside>

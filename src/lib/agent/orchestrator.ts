@@ -44,12 +44,25 @@ export async function processUserMessage(
 ): Promise<AgentResponse> {
     const model = getModel();
 
+    const languageContext = currentProfile.language === 'es'
+        ? "You must interact with the user primarily in Spanish, but keep technical fitness terms in English if appropriate."
+        : "You must interact with the user in English.";
+
+    const nameContext = currentProfile.name ? `The user's name is ${currentProfile.name}. Address them by name occasionally to be friendly.` : "";
+
+    const DYNAMIC_SYSTEM_INSTRUCTION = `
+${SYSTEM_INSTRUCTION}
+    
+${nameContext}
+${languageContext}
+    `;
+
     const chat = model.startChat({
         history: history,
         generationConfig: {
             temperature: 0.7,
         },
-        systemInstruction: { role: 'system', parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: { role: 'system', parts: [{ text: DYNAMIC_SYSTEM_INSTRUCTION }] },
         tools: tools,
     });
 

@@ -18,13 +18,25 @@ export async function POST(req: Request) {
 
     const { message, history } = await req.json();
 
-    // Fetch current profile
+    // Fetch current profile (training data)
     const profileRef = db.collection('profiles').doc(userId);
     const profileSnap = await profileRef.get();
 
+    // Fetch user settings (name, language)
+    const userRef = db.collection('users').doc(userId);
+    const userSnap = await userRef.get();
+
     let currentProfile: Partial<UserProfileInput> = {};
+
     if (profileSnap.exists) {
-        currentProfile = profileSnap.data() as Partial<UserProfileInput>;
+        currentProfile = { ...currentProfile, ...profileSnap.data() as Partial<UserProfileInput> };
+    }
+
+    // Merge user settings
+    if (userSnap.exists) {
+        const userData = userSnap.data();
+        if (userData?.name) currentProfile.name = userData.name;
+        if (userData?.language) currentProfile.language = userData.language;
     }
 
     try {
