@@ -14,13 +14,22 @@ export async function POST(req: Request) {
 
     const userId = session.user.email;
     const profileRef = db.collection('profiles').doc(userId);
-    const profileSnap = await profileRef.get();
+    const profileSnap = await profileRef.get(); // Training prefs
+    const userRef = db.collection('users').doc(userId);
+    const userSnap = await userRef.get(); // Physical stats
 
     if (!profileSnap.exists) {
         return NextResponse.json({ error: "Profile not found" }, { status: 400 });
     }
 
-    const profile = profileSnap.data() as UserProfileInput;
+    const profileData = profileSnap.data() as UserProfileInput;
+    const userData = userSnap.exists ? userSnap.data() : {};
+
+    // Merge them
+    const profile: UserProfileInput = {
+        ...profileData,
+        ...userData // This overwrites name/age/weight/height if present
+    };
 
     // Generate Plan (Generator handles exercise fetching/creation dynamically)
     const plan = await generateTrainingPlan(profile);
@@ -33,6 +42,7 @@ export async function POST(req: Request) {
         title: `Weekly Plan for ${profile.primaryGoal}`, // Better title logic later
         totalWeeks: plan.totalWeeks,
         days: plan.days,
+        profileSnapshot: profile, // Save snapshot for history/validation
         createdAt: Timestamp.now()
     };
 

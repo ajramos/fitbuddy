@@ -7,6 +7,9 @@ export type Environment = 'home' | 'gym';
 export interface UserProfileInput {
     name?: string;
     language?: string;
+    age?: number;
+    weight?: number;
+    height?: number;
     primaryGoal: Goal;
     secondaryGoal: SecondaryGoal;
     experienceLevel: ExperienceLevel;

@@ -44,8 +44,20 @@ export default async function PlanPage(props: { params: Promise<{ id: string }> 
                             <ArrowLeft className="w-6 h-6" />
                         </Link>
                         <div>
-                            <h1 className="text-xl font-bold text-slate-900">{formattedTitle} Plan</h1>
-                            <p className="text-sm text-slate-500">Weekly Repeating Schedule • {plan.totalWeeks} Week Cycle</p>
+                            <div className="flex flex-col gap-2">
+                                <h1 className="text-3xl font-bold capitalize text-slate-800">
+                                    {plan.title.replace(/_/g, " ")}
+                                </h1>
+                                {plan.profileSnapshot && (
+                                    <div className="text-sm text-slate-500 flex flex-wrap gap-4 items-center bg-slate-100 p-2 rounded-lg w-fit">
+                                        <span className="font-medium text-slate-700">Plan Context:</span>
+                                        {plan.profileSnapshot.age && <span>{plan.profileSnapshot.age} years</span>}
+                                        {plan.profileSnapshot.weight && <span>{plan.profileSnapshot.weight} kg</span>}
+                                        {plan.profileSnapshot.height && <span>{plan.profileSnapshot.height} cm</span>}
+                                        <span className="capitalize">{plan.profileSnapshot.experienceLevel}</span>
+                                    </div>
+                                )}
+                            </div>          <p className="text-sm text-slate-500">Weekly Repeating Schedule • {plan.totalWeeks} Week Cycle</p>
                         </div>
                     </div>
                 </div>

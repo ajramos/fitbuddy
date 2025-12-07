@@ -65,5 +65,7 @@ export interface TrainingPlanDocument {
             }[];
         }[];
     }[];
-    createdAt: Timestamp;
+}[];
+profileSnapshot ?: any;
+createdAt: Timestamp;
 }

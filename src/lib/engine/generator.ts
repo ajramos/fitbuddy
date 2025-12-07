@@ -17,6 +17,10 @@ export async function generateTrainingPlan(
     The plan should be detailed and outputted as pure JSON.
     
     User Profile:
+    - Name: ${profile.name || 'User'}
+    - Age: ${profile.age || 'N/A'}
+    - Weight: ${profile.weight ? profile.weight + 'kg' : 'N/A'}
+    - Height: ${profile.height ? profile.height + 'cm' : 'N/A'}
     - Goal: ${profile.primaryGoal}
     - Level: ${profile.experienceLevel}
     - Days Per Week: ${profile.sessionsPerWeek} (You MUST generate exactly ${profile.sessionsPerWeek} workout days)
