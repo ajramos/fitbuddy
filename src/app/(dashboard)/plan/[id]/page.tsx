@@ -5,7 +5,7 @@ import { TrainingPlanDocument } from "@/lib/db/schema";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Clock, Dumbbell, Calendar, ArrowLeft } from "lucide-react";
-import { ExerciseRow } from "../../../components/plan/exercise-row";
+import { ExerciseRow } from "../../../../components/plan/exercise-row";
 
 async function getPlan(userId: string, planId: string): Promise<TrainingPlanDocument | null> {
     const doc = await db.collection('plans').doc(planId).get();

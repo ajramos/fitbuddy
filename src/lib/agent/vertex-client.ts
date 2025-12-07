@@ -5,7 +5,12 @@ import { VertexAI, GenerativeModel } from '@google-cloud/vertexai';
 // We rely on ADC (Application Default Credentials) or env vars
 const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT_ID;
 const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-const modelName = process.env.VERTEX_MODEL_NAME || 'gemini-1.5-pro-002';
+const modelName = process.env.VERTEX_MODEL_NAME;
+
+// Validation against STANDARDS.md
+if (!modelName) {
+    throw new Error("Configuration Error: VERTEX_MODEL_NAME environment variable is invalid or missing. See STANDARDS.md.");
+}
 
 let model: GenerativeModel | null = null;
 

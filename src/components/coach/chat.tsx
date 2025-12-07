@@ -134,7 +134,7 @@ export default function CoachChat() {
 
 
     return (
-        <div className="flex flex-col h-[calc(100vh-80px)] max-w-2xl mx-auto w-full border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="flex flex-col h-full w-full max-w-3xl mx-auto border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>

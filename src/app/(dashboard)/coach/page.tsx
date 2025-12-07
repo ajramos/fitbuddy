@@ -8,9 +8,9 @@ export default async function CoachPage() {
     if (!session) redirect("/");
 
     return (
-        <main className="flex min-h-screen flex-col items-center bg-slate-50 p-4 pt-8">
-            <h1 className="text-3xl font-bold text-slate-800 mb-6">Your AI Coach</h1>
+        <div className="flex flex-col flex-1 h-full bg-slate-50 p-4 md:p-6 overflow-hidden">
+            <h1 className="text-2xl font-bold text-slate-800 mb-4 shrink-0">Your AI Coach</h1>
             <CoachChat />
-        </main>
+        </div>
     );
 }
