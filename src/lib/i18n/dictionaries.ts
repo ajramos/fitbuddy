@@ -14,7 +14,10 @@ export const dictionaries = {
             title: "Your AI Coach",
             placeholder: "Ask something...",
             viewPlan: "View My Plan",
-            welcome: "Hey! I'm your training coach. Tell me briefly what you want to achieve (e.g. fat loss, muscle gain) and what equipment you have."
+            welcome: "Hey! I'm your training coach. Tell me briefly what you want to achieve (e.g. fat loss, muscle gain) and what equipment you have.",
+            errorMessage: "Sorry, I had trouble connecting. Please try again.",
+            planReady: "Perfect. I have everything I need. Click the button below to create your plan!",
+            generatingPlan: "Generating weekly plan..."
         },
         profile: {
             personalTitle: "Personal & App Settings",
@@ -57,7 +60,10 @@ export const dictionaries = {
             title: "Tu Entrenador IA",
             placeholder: "Pregunta algo...",
             viewPlan: "Ver Mi Plan",
-            welcome: "¡Hola! Soy tu entrenador. Cuéntame qué quieres lograr (ej. perder grasa, ganar músculo) y qué equipo tienes."
+            welcome: "¡Hola! Soy tu entrenador. Cuéntame qué quieres lograr (ej. perder grasa, ganar músculo) y qué equipo tienes.",
+            errorMessage: "Lo siento, tuve problemas de conexión. Por favor intenta de nuevo.",
+            planReady: "Perfecto. Tengo todo lo que necesito. ¡Haz clic en el botón de abajo para crear tu plan!",
+            generatingPlan: "Generando plan semanal..."
         },
         profile: {
             personalTitle: "Configuración Personal",

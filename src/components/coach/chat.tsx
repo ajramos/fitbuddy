@@ -81,7 +81,7 @@ export default function CoachChat() {
 
         } catch (error) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'model', text: "Sorry, I had trouble connecting. Please try again." }]);
+            setMessages(prev => [...prev, { role: 'model', text: dict.coach.errorMessage }]);
         } finally {
             setIsLoading(false);
         }
@@ -178,7 +178,7 @@ export default function CoachChat() {
                             disabled={isLoading}
                             className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-green-700 transition transform hover:scale-105"
                         >
-                            {isLoading ? 'Generating Weekly Plan...' : `${dict.coach.viewPlan} 🚀`}
+                            {isLoading ? dict.coach.generatingPlan : `${dict.coach.viewPlan} 🚀`}
                         </button>
                     </div>
                 )}
@@ -209,7 +209,7 @@ export default function CoachChat() {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                 </div>
-            </div>
+            </div >
         </>
     );
 }

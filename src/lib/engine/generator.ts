@@ -78,9 +78,11 @@ export async function generateTrainingPlan(
 
     // Clean response of potential markdown
     let cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
+
     // Sometimes models output text before json
     const firstBrace = cleanJson.indexOf('{');
     const lastBrace = cleanJson.lastIndexOf('}');
+
     if (firstBrace !== -1 && lastBrace !== -1) {
         cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
     }
@@ -89,9 +91,22 @@ export async function generateTrainingPlan(
     try {
         plan = JSON.parse(cleanJson);
     } catch (e) {
-        console.error("Failed to parse JSON. Raw response length:", cleanJson.length);
-        console.error("End of response:", cleanJson.substring(cleanJson.length - 100));
-        throw new Error("Invalid JSON response from AI");
+        // Attempt to fix common JSON issues like unescaped newlines
+        try {
+            // aggressive cleanup for control characters that might be valid in text but invalid in JSON strings if unescaped
+            const fixedJson = cleanJson.replace(/[\u0000-\u001F]+/g, (match) => {
+                if (match === '\n' || match === '\r') return ''; // remove line breaks outside strings? No that breaks it.
+                // Actually standard JSON parsers hate unescaped newlines in strings.
+                // JSON.parse accepts newlines (whitespace) outside strings.
+                // The issue is likely unescaped newlines INSIDE strings or just bad characters.
+                return '';
+            });
+            plan = JSON.parse(fixedJson);
+        } catch (e2) {
+            console.error("Failed to parse JSON. Raw response length:", cleanJson.length);
+            console.error("End of response:", cleanJson.substring(cleanJson.length - 200));
+            throw new Error("Invalid JSON response from AI");
+        }
     }
 
     if (!plan.days || !Array.isArray(plan.days)) {

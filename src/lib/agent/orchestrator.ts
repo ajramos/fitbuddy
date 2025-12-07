@@ -84,12 +84,14 @@ ${languageContext}
 
     if (functionCalls && functionCalls.length > 0) {
         console.log("Function Calls detected:", JSON.stringify(functionCalls));
+
+        const functionResponseParts: any[] = [];
+
         for (const call of functionCalls) {
             if (call.name === 'updateUserProfile') {
                 const args = call.args as any;
-                // Merge with current profile context if we were tracking it in session (omitted for brevity here, assumed passed in/out)
-                // Map flat args to nested structure if needed
                 updatedProfile = {
+                    ...updatedProfile,
                     ...args,
                     stylePreferences: {
                         circuitsPreference: args.circuitsPreference || currentProfile.stylePreferences?.circuitsPreference,
@@ -97,28 +99,35 @@ ${languageContext}
                     }
                 };
 
-                // We must send a function response back to the model to get the final text response
-                // In a real app we might do this loop. For simplicity in this demo,
-                // we acknowledge the update and let the model continue or we might need a second turn.
-                // Vertex AI Node SDK usually handles function calling by returning the call request.
-                // We "mock" the execution here by returning success.
-
-                const functionResponseParts = [{
+                functionResponseParts.push({
                     functionResponse: {
                         name: 'updateUserProfile',
                         response: { name: 'updateUserProfile', content: { success: true } }
                     }
-                }];
-
-                // Continue conversation with tool result
-                const followUp = await chat.sendMessage(functionResponseParts);
-                agentMessage = followUp.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                });
             }
             else if (call.name === 'generatePlan') {
                 state = 'ready';
-                agentMessage = "Perfect. I have everything I need. Click the button below to create your plan!";
+                functionResponseParts.push({
+                    functionResponse: {
+                        name: 'generatePlan',
+                        response: { name: 'generatePlan', content: { success: true } }
+                    }
+                });
             }
         }
+
+        // Send all function responses in a SINGLE turn to avoid 400 error
+        const followUp = await chat.sendMessage(functionResponseParts);
+        agentMessage = followUp.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        // If plan is ready, override message with localized success text
+        if (state === 'ready') {
+            agentMessage = currentProfile.language === 'es'
+                ? "Perfecto. Tengo todo lo que necesito. ¡Haz clic en el botón de abajo para crear tu plan!"
+                : "Perfect. I have everything I need. Click the button below to create your plan!";
+        }
+
     } else {
         agentMessage = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
         console.log("Agent Text Response:", agentMessage);
