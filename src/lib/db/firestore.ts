@@ -1,5 +1,5 @@
 
-import 'server-only';
+
 import { initializeApp, getApps, cert, App, ServiceAccount } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -34,3 +34,15 @@ if (getApps().length === 0) {
 }
 
 export const db = getFirestore(app);
+
+try {
+    db.settings({ ignoreUndefinedProperties: true });
+} catch (e: any) {
+    if (e.code === 'FAILED_PRECONDITION') {
+        // Settings can only be applied once. This error is expected in hot-reloading.
+        console.warn("Firestore settings already applied.");
+    } else {
+        // Ignore other double-init errors in dev
+        console.warn("Firestore settings warning:", e.message);
+    }
+}

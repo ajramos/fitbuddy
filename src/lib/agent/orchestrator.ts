@@ -17,7 +17,8 @@ const SYSTEM_INSTRUCTION = `
 You are an expert functional training coach creating a personalized plan for a user.
 Your goal is to have a natural conversation to build a user profile.
 Don't ask all questions at once. Ask 1-2 relevant questions at a time.
-Be encouraging and concise.
+
+CRITICAL: You MUST explicitly ask about "Limitations or Injuries" before finishing the profile. Do not assume none.
 
 You need to gather:
 1. Primary Goal (fat_loss, muscle_gain, recomposition)
@@ -25,13 +26,14 @@ You need to gather:
 3. Duration (minutes)
 4. Equipment available
 5. Experience Level
-6. Limitations (injuries)
+6. Limitations (injuries) - MUST ASK EXPLICITLY
 7. Style preferences (circuits, running)
 
 When the user provides information, call 'updateUserProfile'.
-If the user's input is vague, infer the best match but confirm with them (e.g. "I want to get toned" -> fat_loss + muscle_maintenance).
+If the user's input is vague, infer the best match but confirm with them.
 Once you have enough info, summarize it and ask for confirmation.
-If confirmed, call 'generatePlan'.
+
+CRITICAL: When the user confirms the summary (e.g., "yes", "correct", "go ahead"), you MUST call the 'generatePlan' function immediately. Do not just say you are ready. YOU MUST CALL THE FUNCTION.
 `;
 
 export async function processUserMessage(
@@ -47,7 +49,7 @@ export async function processUserMessage(
         generationConfig: {
             temperature: 0.7,
         },
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: { role: 'system', parts: [{ text: SYSTEM_INSTRUCTION }] },
         tools: tools,
     });
 
@@ -58,9 +60,17 @@ export async function processUserMessage(
     let updatedProfile: Partial<UserProfileInput> | undefined = undefined;
     let state: ConversationState = 'collecting';
 
-    const functionCalls = response.functionCalls();
+    const functionCalls: any[] = [];
+    if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+            if (part.functionCall) {
+                functionCalls.push(part.functionCall);
+            }
+        }
+    }
 
     if (functionCalls && functionCalls.length > 0) {
+        console.log("Function Calls detected:", JSON.stringify(functionCalls));
         for (const call of functionCalls) {
             if (call.name === 'updateUserProfile') {
                 const args = call.args as any;
@@ -93,11 +103,12 @@ export async function processUserMessage(
             }
             else if (call.name === 'generatePlan') {
                 state = 'ready';
-                agentMessage = "Great! I'm generating your plan now..."; // The frontend should see the 'ready' state and trigger generation
+                agentMessage = "Perfect. I have everything I need. Click the button below to create your plan!";
             }
         }
     } else {
         agentMessage = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        console.log("Agent Text Response:", agentMessage);
     }
 
     return {

@@ -2,7 +2,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db/firestore";
 import { generateTrainingPlan } from "@/lib/engine/generator";
-import { UserProfileInput, ExerciseDefinition } from "@/lib/engine/types";
+import { UserProfileInput } from "@/lib/engine/types";
 import { NextResponse } from "next/server";
 import { Timestamp } from "firebase-admin/firestore";
 
@@ -22,12 +22,8 @@ export async function POST(req: Request) {
 
     const profile = profileSnap.data() as UserProfileInput;
 
-    // Fetch all exercises
-    const exercisesSnap = await db.collection('exercises').get();
-    const allExercises = exercisesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ExerciseDefinition[];
-
-    // Generate Plan
-    const plan = await generateTrainingPlan(profile, allExercises);
+    // Generate Plan (Generator handles exercise fetching/creation dynamically)
+    const plan = await generateTrainingPlan(profile);
 
     // Save Plan
     const planRef = db.collection('plans').doc();

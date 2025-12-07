@@ -1,158 +1,146 @@
 
-import {
-    UserProfileInput,
-    WeeklyPlan,
-    TrainingDay,
-    TrainingBlock,
-    ExerciseDefinition,
-    MovementPattern
-} from './types';
-import { SPLITS, DAY_STRUCTURES, filterExercises } from './rules';
-
+import { UserProfileInput, WeeklyPlan, ExerciseDefinition } from './types';
+import { getModel } from '@/lib/agent/vertex-client';
+import { SchemaType } from '@google-cloud/vertexai';
+import { db } from '@/lib/db/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export async function generateTrainingPlan(
-    profile: UserProfileInput,
-    allExercises: ExerciseDefinition[] // Passed in to avoid DB calls inside pure function, or we fetch inside
+    profile: UserProfileInput
 ): Promise<WeeklyPlan> {
+    const model = getModel();
+    console.log("Generating plan with V2 logic (robust JSON)");
 
-    // 1. Determine Sessions
-    // Clamp to 2-6
-    const sessions = Math.max(2, Math.min(6, profile.sessionsPerWeek));
+    const prompt = `
+    You are an expert strength and conditioning coach.
+    Create a 1-week functional training plan (a repeating microcycle) for the following user.
+    The plan should be detailed and outputted as pure JSON.
+    
+    User Profile:
+    - Goal: ${profile.primaryGoal}
+    - Level: ${profile.experienceLevel}
+    - Days Per Week: ${profile.sessionsPerWeek} (You MUST generate exactly ${profile.sessionsPerWeek} workout days)
+    - Duration: ${profile.minutesPerSession} mins
+    - Equipment: ${profile.equipmentKeys.join(', ')}
+    - Limitations: ${profile.limitations.join(', ') || 'None'}
+    - Preferences: ${profile.stylePreferences?.circuitsPreference || 'Mixed'} circuits, ${profile.stylePreferences?.runningFinisherPreference || 'occasional'} to running.
 
-    // 2. Get Split
-    const splitDays = SPLITS[sessions];
-    if (!splitDays) {
-        throw new Error(`No split defined for ${sessions} days`);
+    CRITICAL INSTRUCTIONS:
+    1. **Real Exercises Only**: Use standard, verifiable exercise names.
+    2. **Exact Frequency**: Generate exactly ${profile.sessionsPerWeek} workout days.
+    3. **Repeating Cycle**: This 1 week will be repeated.
+    4. **CONCISENESS**: Descriptions MUST be short (maximum 15 words). Notes should be empty unless safety-critical.
+    5. **Details**: Provide: name, movementPattern, mainMuscles, requiredEquipment, recommendedLevel, description, sets, reps, durationSeconds, restSeconds, notes.
+
+    Output Schema (JSON):
+    {
+      "totalWeeks": 1,
+      "days": [
+        {
+          "dayIndex": 1,
+          "label": "Monday",
+          "focus": "Full Body Strength",
+          "blocks": [
+            {
+              "type": "warmup",
+              "label": "Warm Up",
+              "exercises": [...]
+            },
+             {
+              "type": "main",
+              "label": "Strength Block",
+              "exercises": [...]
+            }
+          ]
+        }
+      ]
+    }
+    
+    Ensure strict valid JSON format. Do not use code blocks.
+  `;
+
+    const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+            responseMimeType: 'application/json',
+            // No strict schema, let the model generate freeform JSON based on instructions
+            maxOutputTokens: 8192,
+            temperature: 0.4,
+        }
+    });
+
+    const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!responseText) throw new Error("Failed to generate plan");
+
+    // Clean response of potential markdown
+    let cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    // Sometimes models output text before json
+    const firstBrace = cleanJson.indexOf('{');
+    const lastBrace = cleanJson.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
     }
 
-    const days: TrainingDay[] = [];
+    let plan: any;
+    try {
+        plan = JSON.parse(cleanJson);
+    } catch (e) {
+        console.error("Failed to parse JSON. Raw response length:", cleanJson.length);
+        console.error("End of response:", cleanJson.substring(cleanJson.length - 100));
+        throw new Error("Invalid JSON response from AI");
+    }
 
-    for (let i = 0; i < splitDays.length; i++) {
-        const dayLabel = splitDays[i];
-        const structure = DAY_STRUCTURES[dayLabel] || {
-            focusPatterns: ['full_body'],
-            description: 'General Strength'
-        };
-
-        const blocks: TrainingBlock[] = [];
-
-        // Warmup
-        blocks.push({
-            type: 'warm_up',
-            label: 'Warm Up',
-            description: 'General mobility and activation.',
-            exercises: selectExercisesForBlock(allExercises, profile, ['warmup'], 3)
-        });
-
-        // Main Work
-        // Identify the KEY pattern for this day (usually the first one that isn't warmup/cool)
-        const mainPattern = structure.focusPatterns.find(p => p !== 'warmup' && p !== 'cooldown' && p !== 'core' && p !== 'conditioning');
-
-        if (mainPattern) {
-            blocks.push({
-                type: 'main_strength',
-                label: 'Main Strength',
-                description: `Focus on ${mainPattern.replace('_', ' ')}.`,
-                exercises: selectExercisesForBlock(allExercises, profile, [mainPattern], 2, { sets: 3, reps: 10 })
-            });
+    if (!plan.days || !Array.isArray(plan.days)) {
+        console.error("Invalid plan structure:", plan);
+        // Attempt to unwrap if wrapped in a key
+        if (plan.plan && Array.isArray(plan.plan.days)) {
+            plan = plan.plan;
+        } else {
+            throw new Error("Generated plan missing 'days' array");
         }
+    }
 
-        // Secondary / Accessory
-        // Find other patterns
-        const secondaryPatterns = structure.focusPatterns.filter(p => p !== mainPattern && p !== 'warmup' && p !== 'cooldown' && p !== 'core');
-        if (secondaryPatterns.length > 0) {
-            blocks.push({
-                type: 'accessory',
-                label: 'Accessory Work',
-                description: 'Supporting movements.',
-                exercises: selectExercisesForBlock(allExercises, profile, secondaryPatterns, 3, { sets: 3, reps: 12 })
-            });
-        }
+    // Process Exercises: Check existence, Create if new, Link IDs
+    const processedExercises = new Map<string, string>(); // Name -> ID
 
-        // Core
-        if (structure.focusPatterns.includes('core')) {
-            blocks.push({
-                type: 'core',
-                label: 'Core Finisher',
-                description: 'Midline stability.',
-                exercises: selectExercisesForBlock(allExercises, profile, ['core'], 2, { sets: 3, durationSeconds: 45 })
-            });
-        }
+    for (const day of plan.days) {
+        for (const block of day.blocks) {
+            for (const exData of block.exercises as any[]) {
+                const normalizedName = exData.name.trim();
+                // Deterministic ID
+                const id = normalizedName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
-        // Conditioning / Finisher (conditional)
-        const wantsFinisher = profile.stylePreferences.runningFinisherPreference === 'yes' ||
-            (profile.stylePreferences.runningFinisherPreference === 'conditional' && profile.minutesPerSession > 45);
+                exData.exerciseId = id; // Link ID to plan object
 
-        if (structure.focusPatterns.includes('conditioning') || wantsFinisher) {
-            // Only add if not already covered or if day allows
-            // For now, if day structure says conditioning, we added it in main/secondary.
-            // If it is an optional finisher:
-            if (!structure.focusPatterns.includes('conditioning')) {
-                blocks.push({
-                    type: 'finisher',
-                    label: 'Cardio Finisher',
-                    description: 'Get the heart rate up.',
-                    exercises: selectExercisesForBlock(allExercises, profile, ['conditioning'], 1, { durationSeconds: 600 })
-                });
+                // Sanitize mainMuscles to ensure it's always an array (model sometimes returns a string)
+                if (!Array.isArray(exData.mainMuscles)) {
+                    exData.mainMuscles = typeof exData.mainMuscles === 'string' ? [exData.mainMuscles] : [];
+                }
+
+                if (!processedExercises.has(id)) {
+                    // Check DB
+                    const docRef = db.collection('exercises').doc(id);
+                    const docSnap = await docRef.get();
+
+                    if (!docSnap.exists) {
+                        // Create new exercise
+                        console.log(`Creating new exercise: ${normalizedName} `);
+                        await docRef.set({
+                            id: id,
+                            name: exData.name,
+                            movementPattern: exData.movementPattern || 'full_body',
+                            mainMuscles: exData.mainMuscles || [],
+                            requiredEquipment: exData.requiredEquipment || [],
+                            recommendedLevel: exData.recommendedLevel || 'beginner',
+                            description: exData.description || '',
+                            createdAt: Timestamp.now()
+                        });
+                    }
+                    processedExercises.set(id, id);
+                }
             }
         }
-
-        // Cooldown
-        blocks.push({
-            type: 'cooldown',
-            label: 'Cool Down',
-            description: 'Static stretching.',
-            exercises: selectExercisesForBlock(allExercises, profile, ['cooldown'], 2) // assuming we have cooldown exercises
-        });
-
-        days.push({
-            dayIndex: i + 1,
-            label: dayLabel,
-            focus: structure.description,
-            blocks
-        });
     }
 
-    return {
-        totalWeeks: 4,
-        days
-    };
-}
-
-function selectExercisesForBlock(
-    pool: ExerciseDefinition[],
-    profile: UserProfileInput,
-    patterns: MovementPattern[],
-    count: number,
-    defaults: { sets?: number, reps?: number, durationSeconds?: number } = {}
-) {
-    // varied selection logic
-    let candidates: ExerciseDefinition[] = [];
-
-    for (const p of patterns) {
-        const filtered = filterExercises(pool, {
-            pattern: p,
-            equipment: profile.equipmentKeys,
-            level: profile.experienceLevel,
-            limitations: profile.limitations
-        });
-        candidates = [...candidates, ...filtered];
-    }
-
-    // Deduplicate
-    candidates = Array.from(new Set(candidates));
-
-    // Shuffle (naive)
-    candidates.sort(() => Math.random() - 0.5);
-
-    const selected = candidates.slice(0, count);
-
-    return selected.map((ex, idx) => ({
-        exercise: ex,
-        order: idx + 1,
-        sets: defaults.sets || 2,
-        reps: defaults.reps || 10,
-        durationSeconds: defaults.durationSeconds,
-        restSeconds: 60
-    }));
+    return plan;
 }

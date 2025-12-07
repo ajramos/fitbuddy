@@ -27,13 +27,18 @@ export async function POST(req: Request) {
         currentProfile = profileSnap.data() as Partial<UserProfileInput>;
     }
 
-    // Call Agent
-    const result = await processUserMessage(userId, message, history as Content[], currentProfile);
+    try {
+        // Call Agent
+        const result = await processUserMessage(userId, message, history as Content[], currentProfile);
 
-    // Update Profile if needed
-    if (result.updatedProfile) {
-        await profileRef.set({ ...currentProfile, ...result.updatedProfile }, { merge: true });
+        // Update Profile if needed
+        if (result.updatedProfile) {
+            await profileRef.set({ ...currentProfile, ...result.updatedProfile }, { merge: true });
+        }
+
+        return NextResponse.json(result);
+    } catch (error) {
+        console.error("Agent Error:", error);
+        return NextResponse.json({ error: "Agent process failed", details: String(error) }, { status: 500 });
     }
-
-    return NextResponse.json(result);
 }
