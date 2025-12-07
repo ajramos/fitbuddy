@@ -13,26 +13,19 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.email;
-    const profileRef = db.collection('profiles').doc(userId);
-    const profileSnap = await profileRef.get(); // Training prefs
-    const userRef = db.collection('users').doc(userId);
-    const userSnap = await userRef.get(); // Physical stats
 
-    if (!profileSnap.exists) {
+    // Load ALL profile data from users collection
+    const userRef = db.collection('users').doc(userId);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
         return NextResponse.json({ error: "Profile not found" }, { status: 400 });
     }
 
-    const profileData = profileSnap.exists ? profileSnap.data() : {};
-    const userData = userSnap.exists ? userSnap.data() : {};
-
-    // Merge profile data with user data
-    // User data (from users collection) should take priority for user-specific fields
     const profile: UserProfileInput = {
-        ...profileData, // Plan-specific data from profiles collection
-        ...userData,    // User-specific data from users collection (experienceLevel, equipment, etc.)
-        // Ensure name is set
-        name: userData.name || profileData.name || session.user.name || 'User'
-    };
+        ...userSnap.data(),
+        name: userSnap.data()?.name || session.user.name || 'User'
+    } as UserProfileInput;
 
     console.log('[Plan Generation] Using profile:', {
         primaryGoal: profile.primaryGoal,
@@ -41,7 +34,7 @@ export async function POST(req: Request) {
         equipmentKeys: profile.equipmentKeys
     });
 
-    // Generate Plan (Generator handles exercise fetching/creation dynamically)
+    // Generate Plan
     const plan = await generateTrainingPlan(profile);
 
     // Localized plan title

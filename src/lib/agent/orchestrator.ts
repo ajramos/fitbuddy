@@ -54,51 +54,55 @@ export async function processUserMessage(
         : "You must interact with the user in English.";
 
     const nameContext = currentProfile.name ? `The user's name is ${currentProfile.name}. Address them by name occasionally to be friendly.` : "";
-    // Build a context of what USER data we already know (these don't change between plans)
-    const knownUserInfo: string[] = [];
-    const missingUserInfo: string[] = [];
 
-    // USER DATA - Check if we have it stored
-    if (currentProfile.experienceLevel) knownUserInfo.push(`Experience Level: ${currentProfile.experienceLevel}`);
-    else missingUserInfo.push('Experience Level');
+    // Build a context of what data we already know
+    const knownInfo: string[] = [];
+    const missingInfo: string[] = [];
 
-    if (currentProfile.equipmentKeys && currentProfile.equipmentKeys.length > 0) knownUserInfo.push(`Equipment: ${currentProfile.equipmentKeys.join(', ')}`);
-    else missingUserInfo.push('Equipment Available');
+    // Check what profile data we have
+    if (currentProfile.primaryGoal) knownInfo.push(`Primary Goal: ${currentProfile.primaryGoal}`);
+    else missingInfo.push('Primary Goal');
 
-    if (currentProfile.limitations && currentProfile.limitations.length > 0) knownUserInfo.push(`Limitations: ${currentProfile.limitations.join(', ')}`);
-    else missingUserInfo.push('Limitations/Injuries');
+    if (currentProfile.sessionsPerWeek) knownInfo.push(`Sessions per week: ${currentProfile.sessionsPerWeek}`);
+    else missingInfo.push('Training Frequency');
 
-    if (currentProfile.age) knownUserInfo.push(`Age: ${currentProfile.age}`);
-    if (currentProfile.weight) knownUserInfo.push(`Weight: ${currentProfile.weight}kg`);
-    if (currentProfile.height) knownUserInfo.push(`Height: ${currentProfile.height}cm`);
+    if (currentProfile.minutesPerSession) knownInfo.push(`Duration: ${currentProfile.minutesPerSession} minutes`);
+    else missingInfo.push('Session Duration');
 
-    // PLAN DATA - Always ask for these (they vary per plan)
-    const planDataToAsk = [
-        'Primary Goal (fat_loss, muscle_gain, or recomposition)',
-        'Training Frequency (sessions per week)',
-        'Session Duration (minutes)',
-        'Circuit Training Preference',
-        'Running Finisher Preference'
-    ];
+    if (currentProfile.equipmentKeys && currentProfile.equipmentKeys.length > 0) knownInfo.push(`Equipment: ${currentProfile.equipmentKeys.join(', ')}`);
+    else missingInfo.push('Equipment Available');
 
-    const userProfileContext = knownUserInfo.length > 0
-        ? `\n\nUSER INFO WE ALREADY HAVE (do NOT ask about these):\n${knownUserInfo.map(i => `- ${i}`).join('\n')}`
+    if (currentProfile.experienceLevel) knownInfo.push(`Experience Level: ${currentProfile.experienceLevel}`);
+    else missingInfo.push('Experience Level');
+
+    if (currentProfile.limitations && currentProfile.limitations.length > 0) knownInfo.push(`Limitations: ${currentProfile.limitations.join(', ')}`);
+    else missingInfo.push('Limitations/Injuries');
+
+    if (currentProfile.stylePreferences?.circuitsPreference) knownInfo.push(`Circuit Preference: ${currentProfile.stylePreferences.circuitsPreference}`);
+    else missingInfo.push('Circuit Training Preference');
+
+    if (currentProfile.stylePreferences?.runningFinisherPreference) knownInfo.push(`Running Finisher: ${currentProfile.stylePreferences.runningFinisherPreference}`);
+    else missingInfo.push('Running Finisher Preference');
+
+    if (currentProfile.age) knownInfo.push(`Age: ${currentProfile.age}`);
+    if (currentProfile.weight) knownInfo.push(`Weight: ${currentProfile.weight}kg`);
+    if (currentProfile.height) knownInfo.push(`Height: ${currentProfile.height}cm`);
+
+    const profileContext = knownInfo.length > 0
+        ? `\n\nINFO WE ALREADY HAVE (do NOT ask about these):\n${knownInfo.map(i => `- ${i}`).join('\n')}`
         : '';
 
-    const userMissingContext = missingUserInfo.length > 0
-        ? `\n\nUSER INFO WE STILL NEED:\n${missingUserInfo.map(i => `- ${i}`).join('\n')}`
-        : '';
-
-    const planContext = `\n\nPLAN-SPECIFIC INFO TO ASK (these vary per plan, always ask):\n${planDataToAsk.map(i => `- ${i}`).join('\n')}`;
+    const missingContext = missingInfo.length > 0
+        ? `\n\nINFO WE STILL NEED:\n${missingInfo.map(i => `- ${i}`).join('\n')}`
+        : '\n\nYou have all required information. Summarize and confirm with the user.';
 
     const DYNAMIC_SYSTEM_INSTRUCTION = `
 ${SYSTEM_INSTRUCTION}
     
 ${nameContext}
 ${languageContext}
-${userProfileContext}
-${userMissingContext}
-${planContext}
+${profileContext}
+${missingContext}
     `;
 
     const chat = model.startChat({
