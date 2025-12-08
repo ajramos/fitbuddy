@@ -72,7 +72,7 @@ export const dictionaries = {
     },
     es: {
         sidebar: {
-            coach: "Entrenador",
+            coach: "Coach",
             plan: "Mi Plan",
             profile: "Perfil",
             signOut: "Cerrar Sesión",

@@ -29,7 +29,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
     const navItems = [
         { label: dict.sidebar.coach, icon: MessageSquare, href: "/coach" },
-        { label: dict.sidebar.plan, icon: Calendar, href: "/plan/latest" },
         { label: dict.navigation.plans, icon: CalendarDaysIcon, href: "/plans" },
         { label: dict.sidebar.profile, icon: User, href: "/profile" },
     ];
