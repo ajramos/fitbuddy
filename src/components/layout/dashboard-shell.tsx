@@ -11,7 +11,9 @@ import {
     Menu,
     X,
     Dumbbell,
-    ChevronLeft
+    ChevronLeft,
+    CalendarDaysIcon,
+    ChevronRight
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -25,9 +27,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { dict } = useLanguage();
 
-    const items = [
+    const navItems = [
         { label: dict.sidebar.coach, icon: MessageSquare, href: "/coach" },
         { label: dict.sidebar.plan, icon: Calendar, href: "/plan/latest" },
+        { label: "My Plans", icon: CalendarDaysIcon, href: "/plans" },
         { label: dict.sidebar.profile, icon: User, href: "/profile" },
     ];
 
@@ -77,7 +80,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    {items.map((item) => {
+                    {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname.startsWith(item.href) || (item.href === '/plan/latest' && pathname.startsWith('/plan/'));
 

@@ -46,6 +46,20 @@ export const dictionaries = {
                 strength: "Strength",
                 endurance: "Endurance"
             }
+        },
+        navigation: {
+            coach: "Coach",
+            myPlan: "My Plan",
+            plans: "My Plans",
+            profile: "Profile"
+        },
+        plans: {
+            title: "My Training Plans",
+            noPlans: "No plans yet",
+            createFirst: "Start a conversation with your coach to create your first personalized training plan.",
+            goToCoach: "Talk to Coach",
+            createdOn: "Created on",
+            viewPlan: "View Plan"
         }
     },
     es: {
@@ -57,13 +71,25 @@ export const dictionaries = {
             title: "FitBuddy",
         },
         coach: {
-            title: "Tu Entrenador IA",
-            placeholder: "Pregunta algo...",
-            viewPlan: "Ver Mi Plan",
-            welcome: "¡Hola! Soy tu entrenador. Cuéntame qué quieres lograr (ej. perder grasa, ganar músculo) y qué equipo tienes.",
-            errorMessage: "Lo siento, tuve problemas de conexión. Por favor intenta de nuevo.",
+            welcome: "¡Hola! Soy tu entrenador personal. Vamos a crear un plan de entrenamiento adaptado a ti. ¿Cuál es tu objetivo principal?",
+            errorMessage: "Lo siento, tuve problemas de conexión. Por favor, inténtalo de nuevo.",
             planReady: "Perfecto. Tengo todo lo que necesito. ¡Haz clic en el botón de abajo para crear tu plan!",
-            generatingPlan: "Generando plan semanal..."
+            generatingPlan: "Generando Plan Semanal...",
+            viewPlan: "Ver Mi Plan"
+        },
+        navigation: {
+            coach: "Coach",
+            myPlan: "Mi Plan",
+            plans: "Mis Planes",
+            profile: "Perfil"
+        },
+        plans: {
+            title: "Mis Planes de Entrenamiento",
+            noPlans: "Aún no tienes planes",
+            createFirst: "Inicia una conversación con tu coach para crear tu primer plan de entrenamiento personalizado.",
+            goToCoach: "Hablar con el Coach",
+            createdOn: "Creado el",
+            viewPlan: "Ver Plan"
         },
         profile: {
             personalTitle: "Configuración Personal",
