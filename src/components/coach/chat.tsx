@@ -186,74 +186,58 @@ export default function CoachChat() {
         <>
             <h1 className="text-2xl font-bold text-slate-800 mb-4 shrink-0">{dict.coach.title}</h1>
             <div className="flex flex-col h-full w-full max-w-3xl mx-auto border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messages.map((m, i) => (
-                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} `}>
-                            <div className={`max - w - [80 %] rounded - 2xl px - 4 py - 2 ${m.role === 'user'
-                                    ? 'bg-blue-600 text-white rounded-br-none'
-                                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
-                                } `}>
-                                {m.role === 'model' ? (
-                                    <div className="prose prose-sm max-w-none dark:prose-invert prose-p:text-gray-900 prose-li:text-gray-900 prose-strong:text-gray-900 text-gray-900">
-                                        <ReactMarkdown>{m.text}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    m.text
-                                )}
-                            </div>
-                        </div>
                     ))}
-                    {isLoading && (
-                        <div className="flex justify-start">
-                            <div className="bg-gray-100 rounded-2xl px-4 py-2 flex space-x-1 items-center">
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
+                {isLoading && (
+                    <div className="flex justify-start">
+                        <div className="bg-gray-100 rounded-2xl px-4 py-2 flex space-x-1 items-center">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {planReady && (
-                    <div className="p-4 bg-green-50 border-t border-green-100 flex justify-center">
-                        <button
-                            onClick={generatePlan}
-                            disabled={isLoading}
-                            className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-green-700 transition transform hover:scale-105"
-                        >
-                            {isLoading ? dict.coach.generatingPlan : `${dict.coach.viewPlan} 🚀`}
-                        </button>
                     </div>
                 )}
+                <div ref={messagesEndRef} />
+            </div>
 
-                <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-2 items-center">
+            {planReady && (
+                <div className="p-4 bg-green-50 border-t border-green-100 flex justify-center">
                     <button
-                        onClick={toggleRecording}
-                        className={`p - 3 rounded - full transition ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'} `}
-                        title="Voice Input"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                    </button>
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
-                        placeholder={isRecording ? "Listening..." : dict.coach.placeholder}
-                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                        onClick={generatePlan}
                         disabled={isLoading}
-                    />
-                    <button
-                        onClick={() => sendMessage(input)}
-                        disabled={!input.trim() || isLoading}
-                        className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-green-700 transition transform hover:scale-105"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                        {isLoading ? dict.coach.generatingPlan : `${dict.coach.viewPlan} 🚀`}
                     </button>
                 </div>
-            </div >
+            )}
+
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-2 items-center">
+                <button
+                    onClick={toggleRecording}
+                    className={`p - 3 rounded - full transition ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'} `}
+                    title="Voice Input"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                </button>
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
+                    placeholder={isRecording ? "Listening..." : dict.coach.placeholder}
+                    className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    disabled={isLoading}
+                />
+                <button
+                    onClick={() => sendMessage(input)}
+                    disabled={!input.trim() || isLoading}
+                    className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </button>
+            </div>
+        </div >
         </>
     );
 }
