@@ -14,6 +14,8 @@ export async function POST(req: Request) {
 
     const userId = session.user.email;
 
+    const { conversationId } = await req.json();
+
     // Load ALL profile data from users collection
     const userRef = db.collection('users').doc(userId);
     const userSnap = await userRef.get();
@@ -71,6 +73,21 @@ export async function POST(req: Request) {
     };
 
     await planRef.set(planData);
+
+    // Link conversation to plan
+    if (conversationId) {
+        try {
+            const conversationRef = db.collection('conversations').doc(conversationId);
+            await conversationRef.update({
+                planId: planRef.id,
+                updatedAt: Timestamp.now()
+            });
+            console.log(`[Plan Generation] Linked conversation ${conversationId} to plan ${planRef.id}`);
+        } catch (error) {
+            console.error('[Plan Generation] Failed to link conversation:', error);
+            // Don't fail if conversation link fails
+        }
+    }
 
     return NextResponse.json({ planId: planRef.id });
 }

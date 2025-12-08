@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -24,6 +23,8 @@ export default function CoachChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [planReady, setPlanReady] = useState(false);
+    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [isLoadingConversation, setIsLoadingConversation] = useState(true);
     const inputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,16 +34,51 @@ export default function CoachChat() {
 
     useEffect(scrollToBottom, [messages]);
 
+    // Load or create conversation on mount
+    useEffect(() => {
+        const initConversation = async () => {
+            try {
+                // Try to get active conversation
+                const res = await fetch('/api/coach/conversation');
+                const data = await res.json();
+
+                if (data.conversation) {
+                    // Load existing conversation
+                    setConversationId(data.conversation.id);
+                    if (data.conversation.messages && data.conversation.messages.length > 0) {
+                        setMessages([
+                            { role: 'model', text: dict.coach.welcome },
+                            ...data.conversation.messages
+                        ]);
+                    }
+                    console.log('[Chat] Loaded existing conversation:', data.conversation.id);
+                } else {
+                    // Create new conversation
+                    const createRes = await fetch('/api/coach/conversation', { method: 'POST' });
+                    const createData = await createRes.json();
+                    setConversationId(createData.conversationId);
+                    console.log('[Chat] Created new conversation:', createData.conversationId);
+                }
+            } catch (error) {
+                console.error('[Chat] Failed to init conversation:', error);
+            } finally {
+                setIsLoadingConversation(false);
+            }
+        };
+
+        initConversation();
+    }, []);
+
     // Focus on mount and when loading finishes
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && !isLoadingConversation) {
             // Small timeout to ensure disabled attribute is removed
             setTimeout(() => inputRef.current?.focus(), 10);
         }
-    }, [isLoading]);
+    }, [isLoading, isLoadingConversation]);
 
     const sendMessage = async (text: string) => {
-        if (!text.trim()) return;
+        if (!text.trim() || !conversationId) return;
 
         const newMessages = [...messages, { role: 'user', text } as Message];
         setMessages(newMessages);
@@ -64,7 +100,11 @@ export default function CoachChat() {
             const res = await fetch('/api/coach/message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, history })
+                body: JSON.stringify({
+                    message: text,
+                    history,
+                    conversationId
+                })
             });
 
             if (!res.ok) throw new Error('Failed to send message');
@@ -90,10 +130,14 @@ export default function CoachChat() {
     const generatePlan = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/plan/generate', { method: 'POST' });
+            const res = await fetch('/api/plan/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conversationId })
+            });
             const data = await res.json();
             if (data.planId) {
-                router.push(`/plan/${data.planId}`);
+                router.push(`/ plan / ${data.planId} `);
             }
         } catch (e) {
             console.error(e);
@@ -144,11 +188,11 @@ export default function CoachChat() {
             <div className="flex flex-col h-full w-full max-w-3xl mx-auto border border-gray-200 rounded-xl bg-white shadow-sm overflow-hidden">
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {messages.map((m, i) => (
-                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user'
-                                ? 'bg-blue-600 text-white rounded-br-none'
-                                : 'bg-gray-100 text-gray-800 rounded-bl-none'
-                                }`}>
+                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} `}>
+                            <div className={`max - w - [80 %] rounded - 2xl px - 4 py - 2 ${m.role === 'user'
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                                } `}>
                                 {m.role === 'model' ? (
                                     <div className="prose prose-sm max-w-none dark:prose-invert prose-p:text-gray-900 prose-li:text-gray-900 prose-strong:text-gray-900 text-gray-900">
                                         <ReactMarkdown>{m.text}</ReactMarkdown>
@@ -186,7 +230,7 @@ export default function CoachChat() {
                 <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-2 items-center">
                     <button
                         onClick={toggleRecording}
-                        className={`p-3 rounded-full transition ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                        className={`p - 3 rounded - full transition ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'} `}
                         title="Voice Input"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>

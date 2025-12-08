@@ -67,4 +67,21 @@ export interface TrainingPlanDocument {
     }[];
     profileSnapshot?: any;
     createdAt: Timestamp;
+    deleted?: boolean;
+}
+
+// Conversation / Chat History
+export interface ConversationMessage {
+    role: 'user' | 'model';
+    text: string;
+    timestamp?: Date;
+}
+
+export interface ConversationDocument {
+    id: string;
+    userId: string;
+    planId?: string;  // Set when plan is generated, null until then
+    messages: ConversationMessage[];
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
 }

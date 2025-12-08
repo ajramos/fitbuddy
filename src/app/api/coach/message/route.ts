@@ -5,6 +5,7 @@ import { processUserMessage } from "@/lib/agent/orchestrator";
 import { UserProfileInput } from "@/lib/engine/types";
 import { Content } from "@google-cloud/vertexai";
 import { NextResponse } from "next/server";
+import { Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
     const session = await auth();
@@ -12,11 +13,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.email; // Using email as ID for simplicity if uid not available in session easily, but preferably sub
-    // Actually, session.user.id is usually available with proper generic config, but let's trust email for unique ID for now or fetch from DB.
-    // In a real app we'd map email to uid.
+    const userId = session.user.email;
 
-    const { message, history } = await req.json();
+    const { message, history, conversationId } = await req.json();
+
+    if (!conversationId) {
+        return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
+    }
 
     // Fetch user data (ALL profile data in one place)
     const userRef = db.collection('users').doc(userId);
@@ -75,6 +78,32 @@ export async function POST(req: Request) {
                 console.error('[Coach] Failed to auto-save profile updates:', error);
                 // Don't fail the request if save fails
             }
+        }
+
+        // Save messages to conversation
+        try {
+            const conversationRef = db.collection('conversations').doc(conversationId);
+            const conversationSnap = await conversationRef.get();
+
+            if (conversationSnap.exists) {
+                const existingMessages = conversationSnap.data()?.messages || [];
+
+                const updatedMessages = [
+                    ...existingMessages,
+                    { role: 'user', text: message, timestamp: new Date() },
+                    { role: 'model', text: result.message, timestamp: new Date() }
+                ];
+
+                await conversationRef.update({
+                    messages: updatedMessages,
+                    updatedAt: Timestamp.now()
+                });
+
+                console.log(`[Coach] Saved messages to conversation: ${conversationId}`);
+            }
+        } catch (error) {
+            console.error('[Coach] Failed to save messages to conversation:', error);
+            // Don't fail the request if conversation save fails
         }
 
         return NextResponse.json({
