@@ -60,6 +60,14 @@ export const dictionaries = {
             goToCoach: "Talk to Coach",
             createdOn: "Created on",
             viewPlan: "View Plan"
+        },
+        planDetail: {
+            notFound: "Plan not found",
+            goBack: "Go back to Coach",
+            planContext: "Plan Context",
+            weekCycle: "Weekly Repeating Schedule",
+            week: "Week",
+            weeks: "Weeks"
         }
     },
     es: {
@@ -90,6 +98,14 @@ export const dictionaries = {
             goToCoach: "Hablar con el Coach",
             createdOn: "Creado el",
             viewPlan: "Ver Plan"
+        },
+        planDetail: {
+            notFound: "Plan no encontrado",
+            goBack: "Volver al Coach",
+            planContext: "Contexto del Plan",
+            weekCycle: "Horario Semanal Repetitivo",
+            week: "Semana",
+            weeks: "Semanas"
         },
         profile: {
             personalTitle: "Configuración Personal",

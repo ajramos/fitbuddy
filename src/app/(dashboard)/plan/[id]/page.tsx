@@ -1,38 +1,54 @@
+'use client';
 
-import { auth } from "@/auth";
-import { db } from "@/lib/db/firestore";
-import { TrainingPlanDocument } from "@/lib/db/schema";
-import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Clock, Dumbbell, Calendar, ArrowLeft } from "lucide-react";
+import { Dumbbell, ArrowLeft } from "lucide-react";
 import { ExerciseRow } from "../../../../components/plan/exercise-row";
+import { useLanguage } from "@/components/providers/language-provider";
+import { TrainingPlanDocument } from "@/lib/db/schema";
 
-async function getPlan(userId: string, planId: string): Promise<TrainingPlanDocument | null> {
-    const doc = await db.collection('plans').doc(planId).get();
-    if (!doc.exists) return null;
-    const plan = doc.data() as TrainingPlanDocument;
-    if (plan.userId !== userId) return null; // Simple ownership check
-    return plan;
-}
+export default function PlanPage({ params }: { params: { id: string } }) {
+    const { dict } = useLanguage();
+    const [plan, setPlan] = useState<TrainingPlanDocument | null>(null);
+    const [loading, setLoading] = useState(true);
 
-export default async function PlanPage(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-    const session = await auth();
-    if (!session?.user?.email) redirect("/");
+    useEffect(() => {
+        async function fetchPlan() {
+            try {
+                const res = await fetch(`/api/plan/${params.id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setPlan(data.plan);
+                } else {
+                    setPlan(null);
+                }
+            } catch (error) {
+                console.error('[Plan Page] Error fetching plan:', error);
+                setPlan(null);
+            } finally {
+                setLoading(false);
+            }
+        }
 
-    const plan = await getPlan(session.user.email, params.id);
+        fetchPlan();
+    }, [params.id]);
 
-    if (!plan) {
+    if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen text-slate-800">
-                <h1 className="text-2xl font-bold mb-4">Plan not found</h1>
-                <Link href="/coach" className="text-blue-600 hover:underline">Go back to Coach</Link>
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-slate-600">Loading...</div>
             </div>
         );
     }
 
-    // Format Title nicely (e.g. "muscle_gain" -> "Muscle Gain")
-    const formattedTitle = plan.title.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (!plan) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen text-slate-800">
+                <h1 className="text-2xl font-bold mb-4">{dict.planDetail.notFound}</h1>
+                <Link href="/coach" className="text-blue-600 hover:underline">{dict.planDetail.goBack}</Link>
+            </div>
+        );
+    }
 
     return (
         <main className="min-h-screen bg-slate-50 pb-12">
@@ -50,14 +66,17 @@ export default async function PlanPage(props: { params: Promise<{ id: string }> 
                                 </h1>
                                 {plan.profileSnapshot && (
                                     <div className="text-sm text-slate-500 flex flex-wrap gap-4 items-center bg-slate-100 p-2 rounded-lg w-fit">
-                                        <span className="font-medium text-slate-700">Plan Context:</span>
-                                        {plan.profileSnapshot.age && <span>{plan.profileSnapshot.age} years</span>}
+                                        <span className="font-medium text-slate-700">{dict.planDetail.planContext}:</span>
+                                        {plan.profileSnapshot.age && <span>{plan.profileSnapshot.age} {dict.navigation.plans === "Mis Planes" ? "años" : "years"}</span>}
                                         {plan.profileSnapshot.weight && <span>{plan.profileSnapshot.weight} kg</span>}
                                         {plan.profileSnapshot.height && <span>{plan.profileSnapshot.height} cm</span>}
                                         <span className="capitalize">{plan.profileSnapshot.experienceLevel}</span>
                                     </div>
                                 )}
-                            </div>          <p className="text-sm text-slate-500">Weekly Repeating Schedule • {plan.totalWeeks} Week Cycle</p>
+                            </div>
+                            <p className="text-sm text-slate-500">
+                                {dict.planDetail.weekCycle} • {plan.totalWeeks} {plan.totalWeeks === 1 ? dict.planDetail.week : dict.planDetail.weeks}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -76,7 +95,7 @@ export default async function PlanPage(props: { params: Promise<{ id: string }> 
                                 </p>
                             </div>
                             <div className="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">
-                                Day {day.dayIndex}
+                                {dict.navigation.plans === "Mis Planes" ? "Día" : "Day"} {day.dayIndex}
                             </div>
                         </div>
 
@@ -100,10 +119,3 @@ export default async function PlanPage(props: { params: Promise<{ id: string }> 
         </main>
     );
 }
-
-// Import at the top will be added by next step or implied if I assumed I could edit whole file. 
-// Since I am doing replace_file_content on a function, I need to make sure imports are there.
-// Actually, I should probably do a full replacement of the file content or ensures imports exist.
-// I will use replace_file_content for the function and then another call for imports if needed.
-// Wait, I haven't imported ExerciseRow yet. I should add the import.
-
