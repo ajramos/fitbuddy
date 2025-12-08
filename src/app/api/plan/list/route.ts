@@ -16,21 +16,21 @@ export async function GET(req: Request) {
         const plansRef = db.collection('plans');
         const snapshot = await plansRef
             .where('userId', '==', userId)
-            .where('deleted', '!=', true)  // Exclude soft-deleted plans
-            .orderBy('deleted')  // Required for !=  query
             .orderBy('createdAt', 'desc')
             .get();
 
-        const plans = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                title: data.title,
-                goal: data.profileSnapshot?.primaryGoal || 'unknown',
-                createdAt: data.create AtStoSeconds? new Date(data.createdAt._seconds * 1000).toISOString() : null,
-                totalWeeks: data.totalWeeks,
-            };
-        });
+        const plans = snapshot.docs
+            .filter(doc => !doc.data().deleted)  // Filter deleted in code
+            .map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    title: data.title,
+                    goal: data.profileSnapshot?.primaryGoal || 'unknown',
+                    createdAt: data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000).toISOString() : null,
+                    totalWeeks: data.totalWeeks,
+                };
+            });
 
         return NextResponse.json({ plans });
     } catch (error) {

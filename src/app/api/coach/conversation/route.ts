@@ -14,22 +14,23 @@ export async function GET(req: Request) {
     const userId = session.user.email;
 
     try {
-        // Find most recent conversation without a planId (active conversation)
+        // Find most recent conversation (filter planId in code to avoid composite index)
         const conversationsRef = db.collection('conversations');
         const snapshot = await conversationsRef
             .where('userId', '==', userId)
-            .where('planId', '==', null)
             .orderBy('updatedAt', 'desc')
-            .limit(1)
+            .limit(10)  // Get last 10 to filter in code
             .get();
 
-        if (!snapshot.empty) {
-            const doc = snapshot.docs[0];
-            const data = doc.data();
+        // Find first conversation without planId
+        const activeDoc = snapshot.docs.find(doc => !doc.data().planId);
+
+        if (activeDoc) {
+            const data = activeDoc.data();
 
             // Convert Timestamps to plain objects
             const conversation = {
-                id: doc.id,
+                id: activeDoc.id,
                 userId: data.userId,
                 planId: data.planId || null,
                 messages: data.messages || [],
