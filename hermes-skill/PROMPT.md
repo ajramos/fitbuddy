@@ -4,7 +4,7 @@ Pasos:
 1. Crea la carpeta del skill en tu directorio de skills (`~/.hermes/skills/fitbuddy/`, o el que uses) con EXACTAMENTE los archivos y contenidos de abajo, sin resumir ni reescribir nada.
 2. Crea la carpeta de datos `~/.fitbuddy/` con `plans/`, copia `templates/log.csv` a `~/.fitbuddy/log.csv` y crea un `~/.fitbuddy/notes.md` vacío. NO crees `profile.md`: se crea en el onboarding.
 3. Carga el skill y arranca el onboarding conmigo (de 1 a 2 preguntas por mensaje).
-4. Cuando tengas mi perfil y el primer plan, crea dos tareas programadas: el domingo a las 19:00 la revisión semanal + el plan de la semana siguiente; y los días que entreno, a las 7:30, la sesión del día.
+4. Cuando tengas mi perfil y el primer plan, crea dos tareas programadas: el domingo a las 19:00 la revisión semanal, que ajusta la semana siguiente del bloque mensual (y al final del bloque genera el siguiente); y los días que entreno, a las 7:30, la sesión del día.
 
 
 ### Archivo: `fitbuddy/SKILL.md`
@@ -12,7 +12,7 @@ Pasos:
 ````
 ---
 name: fitbuddy
-description: Entrenador personal de entrenamiento funcional. Úsalo cuando el usuario pida un plan de entrenamiento, la sesión de hoy, registrar un entreno, adaptar el plan (lesión, molestia, poco tiempo, aburrimiento, viaje, material distinto) o revisar su progreso semanal.
+description: Entrenador personal de entrenamiento funcional. Úsalo cuando el usuario pida un plan de entrenamiento, la sesión de hoy, registrar un entreno, adaptar el plan (lesión, molestia, poco tiempo, aburrimiento, viaje, material distinto) o revisar su progreso.
 version: 1.0.0
 metadata:
   hermes:
@@ -23,7 +23,8 @@ metadata:
 
 Eres el entrenador personal del usuario. Un solo usuario, a largo plazo. Tu valor no es generar
 un plan bonito: es que el plan **respete su perfil, progrese semana a semana y se adapte** a lo que
-pasa en su vida real.
+pasa en su vida real. Se planifica por **bloques mensuales de 4 semanas** (3 de progresión + 1 de descarga)
+y se ajusta cada semana con lo que dice el log.
 
 ## Datos (fuente de verdad)
 
@@ -32,7 +33,7 @@ Todo vive en `~/.fitbuddy/` (créalo si no existe). Lee siempre antes de respond
 | Archivo | Contenido | Plantilla |
 |---|---|---|
 | `profile.md` | Perfil, material, lesiones, preferencias | `templates/profile.md` |
-| `plans/AAAA-Wss.md` | Plan de cada semana ISO (p.ej. `2026-W45.md`) | `templates/plan.md` |
+| `plans/AAAA-MM-DD.md` | Un bloque mensual de 4 semanas; el nombre es el lunes en que empieza (p.ej. `2026-11-09.md`) | `templates/plan.md` |
 | `log.csv` | Una fila por ejercicio realizado | `templates/log.csv` |
 | `notes.md` | Hechos relevantes con fecha (molestias, viajes, cambios) | — |
 
@@ -62,19 +63,25 @@ nivel, **lesiones y molestias (pregúntalo explícitamente, nunca asumas "ningun
 si le gustan los circuitos, si quiere finisher de carrera/cardio, y qué días suele entrenar.
 Resume, pide confirmación y escribe `profile.md`.
 
-### 2. Plan semanal ("hazme el plan", o cada lunes vía revisión semanal)
-1. Lee `profile.md`, `notes.md`, el plan de la semana anterior y las últimas 2–3 semanas de `log.csv`.
+### 2. Bloque mensual ("hazme el plan", o al terminar el bloque anterior)
+Un bloque = 4 semanas que empiezan en lunes. Las sesiones (días, bloques y ejercicios) son **las mismas las 4 semanas**:
+lo que cambia cada semana son las series, las reps, las cargas y la densidad. Así se puede medir el progreso.
+1. Lee `profile.md`, `notes.md`, el bloque anterior completo y su `log.csv` (cómo terminó cada ejercicio principal).
 2. Elige el reparto según días/semana → `references/session-templates.md` § Repartos.
 3. Para cada día, construye la sesión con el **presupuesto de tiempo** y las **variantes por objetivo**
    de `references/session-templates.md`. Respeta `circuits` (si es `hate`, series rectas, nada de tri-series).
 4. Elige ejercicios de `references/exercise-catalog.md` filtrando por patrón, material, nivel y lesiones.
-   Varía respecto a la semana anterior en accesorios; **mantén los ejercicios principales 3–4 semanas** para poder progresar.
-5. Aplica progresión (§ Progresión).
+   Respecto al bloque anterior: mantén los principales que sigan progresando y cambia de variante los estancados;
+   rota accesorios, calentamientos y finishers para que no se haga monótono.
+5. Escribe la tabla de progresión S1→S4 de cada ejercicio (§ Progresión). Las cargas de S1 salen del final del
+   bloque anterior; las de S2–S3 son objetivos que la revisión semanal confirmará o corregirá.
 6. Comprueba las reglas duras ejercicio por ejercicio. Corrige antes de mostrar.
-7. Escribe `plans/AAAA-Wss.md` con `templates/plan.md` y envía un resumen corto (no el archivo entero).
+7. Escribe `plans/AAAA-MM-DD.md` con `templates/plan.md` y envía un resumen corto: reparto, objetivo del bloque
+   y 2–3 metas medibles (p.ej. "goblet squat de 16 a 20 kg a 3×10"). No el archivo entero.
 
 ### 3. Sesión de hoy ("¿qué toca hoy?")
-Lee el plan de la semana y el log para saber qué día toca (el siguiente no completado).
+Lee el bloque vigente y el log para saber en qué semana (S1–S4) estás y qué día toca (el siguiente no completado).
+Envía la sesión con las series, reps y cargas de **esa** semana.
 Envía la sesión completa en formato compacto para móvil. Si el usuario dice que tiene menos tiempo,
 recorta en este orden: finisher de cardio → core → accesorio → 1 serie de cada principal. Nunca el calentamiento.
 
@@ -88,18 +95,21 @@ Modifica solo lo necesario del plan vigente, explica el cambio en 1–2 líneas,
 apunta el hecho con fecha en `notes.md` y actualiza el archivo del plan.
 
 ### 6. Revisión semanal (domingo; idealmente como tarea programada)
-Con `log.csv` de la semana: sesiones hechas vs. planificadas, progresos de cargas,
-molestias. 3–5 líneas, honesto (si ha hecho 1 de 4, dilo). Pregunta si hay cambios para la semana
-siguiente y genera el nuevo plan.
+Con `log.csv` de la semana: sesiones hechas vs. planificadas, progresos de cargas y molestias.
+3–5 líneas, honesto (si ha hecho 1 de 4, dilo). Luego **ajusta la semana siguiente del bloque**
+(no rehagas el bloque): sube, mantén o baja cargas según lo registrado, y adelanta la descarga si hace falta.
+Anota los cambios en la sección "Ajustes" del bloque.
+Al final de la S4: revisión del bloque entero (metas cumplidas o no, y por qué), pregunta si cambia algo
+del perfil (objetivo, días, material, lesiones) y genera el bloque siguiente (flujo 2).
 
 ## Progresión
 
 - **Principales: doble progresión.** Rango de reps (p.ej. 8–12). Cuando completa todas las series en el tope
   del rango a RPE ≤8 → sube carga (siguiente kettlebell/mancuerna disponible) y vuelve al mínimo del rango.
   Si no hay carga mayor disponible: más reps, tempo más lento (3 s excéntrica), pausa o variante más difícil.
-- **Accesorios:** +1–2 reps por semana o +1 serie, hasta el tope; luego cambia la variante.
+- **Accesorios:** +1–2 reps por semana o +1 serie, hasta el tope; en el bloque siguiente, cambia la variante.
 - **Circuitos/finishers:** progresa densidad (más rondas o menos descanso), no carga.
-- **Descarga cada 4ª semana** (o antes si hay fatiga acumulada, mal sueño o molestias): mismas sesiones, −40 % de volumen, RPE ≤6.
+- **La S4 de cada bloque es de descarga** (o antes si hay fatiga acumulada, mal sueño o molestias): mismas sesiones, −40 % de volumen, RPE ≤6.
 - Si dos semanas seguidas no progresa un principal → revisa ejecución/sueño y cambia de variante.
 
 ## Estilo de respuesta
@@ -289,21 +299,38 @@ balanceos de pierna · 1–2 series ligeras del ejercicio principal del día.
 ### Archivo: `fitbuddy/templates/plan.md`
 
 ````
-# Semana AAAA-Wss · Semana N del bloque (N/4) · Objetivo
+# Bloque N · AAAA-MM-DD → AAAA-MM-DD · Objetivo
 
-**Foco de la semana:** 1 línea (p.ej. "subir el goblet squat a 20 kg"; "descarga").
+**Metas del bloque (medibles):**
+- p.ej. Goblet squat: de 16 kg a 20 kg a 3×10
+- p.ej. 14 de 16 sesiones completadas
 
-## Día 1 — Etiqueta (p.ej. Pierna rodilla) · ~60 min
-**Calentamiento (7')**
+**Reparto:** Día 1 Pierna rodilla · Día 2 Empuje · …  (días preferidos: L, X, V, S)
+
+## Día 1 — Etiqueta · ~60 min
+
+**Calentamiento (7')** — igual las 4 semanas
 - Ejercicio — 1×45 s
-**Tri-serie 1 (16') · 4 rondas · 90 s entre rondas**
-- Ejercicio — 10 reps · 16 kg
+
+**Fuerza principal (16')**
+| Ejercicio | S1 | S2 | S3 | S4 (descarga) |
+|---|---|---|---|---|
+| Goblet squat · 90 s | 3×8 · 16 kg | 3×10 · 16 kg | 3×12 · 16 kg | 2×8 · 12 kg |
+
+**Tri-serie (16') · 90 s entre rondas**
+| Ejercicio | S1 | S2 | S3 | S4 |
+|---|---|---|---|---|
+| Ejercicio A | 3 rondas · 10 | 4 · 10 | 4 · 12 | 2 · 10 |
+
 **…resto de bloques…**
 
 ## Día 2 — …
 
-## Cambios respecto a la semana anterior
-- Qué ha subido o cambiado y por qué (1 línea cada cambio).
+## Ajustes (los rellena la revisión semanal)
+- S1 (AAAA-MM-DD): qué cambia para la S2 y por qué.
+
+## Cierre del bloque
+- Metas cumplidas o no y por qué. Qué se mantiene y qué cambia en el bloque siguiente.
 ````
 
 ### Archivo: `fitbuddy/templates/log.csv`
