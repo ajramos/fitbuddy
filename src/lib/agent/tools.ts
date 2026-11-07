@@ -23,8 +23,16 @@ export const updateUserProfileTool: FunctionDeclaration = {
                 items: { type: SchemaType.STRING },
                 description: 'Available equipment normalized keys (e.g. kettlebell, dumbbell, bodyweight)'
             },
-            circuitsPreference: { type: SchemaType.STRING, enum: ['love', 'neutral', 'hate'] },
-            runningFinisher: { type: SchemaType.STRING, enum: ['yes', 'conditional', 'no'] },
+            circuitsPreference: {
+                type: SchemaType.STRING,
+                enum: ['love', 'neutral', 'hate'],
+                description: 'User preference for circuit-style training (multiple exercises back-to-back)'
+            },
+            runningFinisherPreference: {
+                type: SchemaType.STRING,
+                enum: ['yes', 'conditional', 'no'],
+                description: 'Whether user wants running/cardio finisher at end of sessions'
+            },
         },
         // No "required" fields because we update incrementally
     },

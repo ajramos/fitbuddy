@@ -62,12 +62,20 @@ export async function POST(req: Request) {
                 if (result.updatedProfile.weight) updateData.weight = result.updatedProfile.weight;
                 if (result.updatedProfile.height) updateData.height = result.updatedProfile.height;
 
-                // Style preferences
-                if (result.updatedProfile.stylePreferences?.circuitsPreference) {
-                    updateData.circuitsPreference = result.updatedProfile.stylePreferences.circuitsPreference;
+                // Style preferences - save as nested object
+                if (result.updatedProfile.stylePreferences) {
+                    updateData.stylePreferences = {
+                        circuitsPreference: result.updatedProfile.stylePreferences.circuitsPreference || 'neutral',
+                        runningFinisherPreference: result.updatedProfile.stylePreferences.runningFinisherPreference || 'no'
+                    };
                 }
-                if (result.updatedProfile.stylePreferences?.runningFinisherPreference) {
-                    updateData.runningFinisher = result.updatedProfile.stylePreferences.runningFinisherPreference;
+
+                // Set default values for required fields if not present in update
+                if (!updateData.secondaryGoal) {
+                    updateData.secondaryGoal = 'none'; // Default secondary goal
+                }
+                if (!updateData.environment && result.updatedProfile.equipmentKeys) {
+                    updateData.environment = 'home'; // Default to home if equipment specified
                 }
 
                 if (Object.keys(updateData).length > 1) { // > 1 because updatedAt always exists

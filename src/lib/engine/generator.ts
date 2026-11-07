@@ -1,158 +1,239 @@
 
-import { UserProfileInput, WeeklyPlan, ExerciseDefinition } from './types';
+import { UserProfileInput, WeeklyPlan, TrainingDay, TrainingBlock, TrainingBlockExercise } from './types';
 import { getPlanModel } from '@/lib/agent/vertex-client';
 import { SchemaType } from '@google-cloud/vertexai';
 import { db } from '@/lib/db/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
 
+// --- Schemas for Structured Output ---
+
+const trainingBlockExerciseSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        name: { type: SchemaType.STRING },
+        sets: { type: SchemaType.INTEGER },
+        reps: { type: SchemaType.INTEGER, nullable: true },
+        durationSeconds: { type: SchemaType.INTEGER, nullable: true },
+        restSeconds: { type: SchemaType.INTEGER, nullable: true },
+        notes: { type: SchemaType.STRING, nullable: true },
+        mainMuscles: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+        },
+        requiredEquipment: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+        },
+        movementPattern: { type: SchemaType.STRING, nullable: true }, // Optional hints for DB creation
+        recommendedLevel: { type: SchemaType.STRING, nullable: true },
+        description: { type: SchemaType.STRING, nullable: true }
+    },
+    required: ['name', 'sets', 'mainMuscles']
+};
+
+const trainingBlockSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        type: { type: SchemaType.STRING, enum: ['warm_up', 'main_strength', 'accessory', 'core', 'finisher', 'cooldown'] },
+        label: { type: SchemaType.STRING },
+        exercises: {
+            type: SchemaType.ARRAY,
+            items: trainingBlockExerciseSchema
+        }
+    },
+    required: ['type', 'label', 'exercises']
+};
+
+const singleDaySchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        blocks: {
+            type: SchemaType.ARRAY,
+            items: trainingBlockSchema
+        }
+    },
+    required: ['blocks']
+};
+
+const skeletonDaySchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        dayIndex: { type: SchemaType.INTEGER },
+        label: { type: SchemaType.STRING },
+        focus: { type: SchemaType.STRING }
+    },
+    required: ['dayIndex', 'label', 'focus']
+};
+
+const planSkeletonSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        totalWeeks: { type: SchemaType.INTEGER },
+        days: {
+            type: SchemaType.ARRAY,
+            items: skeletonDaySchema
+        }
+    },
+    required: ['totalWeeks', 'days']
+};
+
+
+// --- Generation Functions ---
+
+async function generatePlanSkeleton(profile: UserProfileInput, languageInstruction: string): Promise<{ totalWeeks: number, days: { dayIndex: number, label: string, focus: string }[] }> {
+    const model = getPlanModel();
+
+    const prompt = `
+        You are an expert strength and conditioning coach.
+        Create a 1-week training schedule SKELETON (structure only, no exercises yet) for this user.
+        
+        ${languageInstruction}
+        
+        User Profile:
+        - Goal: ${profile.primaryGoal}
+        - Level: ${profile.experienceLevel}
+        - Days Per Week: ${profile.sessionsPerWeek}
+        
+        Output valid JSON with the days, labels (e.g., "Day 1" or "Lunes"), and primary focus (e.g., "Full Body", "Upper Push").
+    `;
+
+    try {
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: planSkeletonSchema,
+                temperature: 0.4
+            }
+        });
+
+        return JSON.parse(result.response.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+    } catch (e) {
+        console.error("Skeleton Generation Failed", e);
+        throw new Error("Failed to generate plan structure");
+    }
+}
+
+async function generateDayDetails(
+    profile: UserProfileInput,
+    dayLabel: string,
+    dayFocus: string,
+    languageInstruction: string,
+    dayIndex: number
+): Promise<TrainingBlock[]> {
+    const model = getPlanModel();
+    const userLanguage = profile.language || 'en';
+
+    const prompt = `
+    You are an expert coach. Generate the DETAILED WORKOUT BLOCKS for Day ${dayIndex}: "${dayLabel}" - Focus: "${dayFocus}".
+    
+    ${languageInstruction}
+
+    User: ${profile.name}, ${profile.experienceLevel}, Goal: ${profile.primaryGoal}
+    Minutes: ${profile.minutesPerSession}, Equipment: ${profile.equipmentKeys.join(', ')}
+
+    MANDATORY 6-BLOCK STRUCTURE (Adhere Strictly):
+    1. CALENTAMIENTO DINÁMICO (5-8 min): 3-4 exercises, 1 set, 60s each, 0 rest.
+    2. CIRCUITO TRI-SERIES 1 (15-18 min): 3 exercises, 3-4 rounds. 0s rest between exercises, 90s between rounds.
+    3. CIRCUITO TRI-SERIES 2 (15-18 min): 3 exercises, 3-4 rounds. 0s rest between exercises, 90s between rounds.
+    4. FINISHER METABÓLICO (6-10 min): 3-5 exercises, 40s work/20s rest (40/20).
+    5. TABATA ABDOMINALES (4 min): 2 exercises, Tabata 20s/10s, 8 rounds.
+    6. ${profile.stylePreferences?.runningFinisherPreference === 'yes' ? 'FINISHER DE CARRERA' : 'CARDIO FINISHER'} (10-12 min): Intervals or steady.
+
+    INSTRUCTIONS:
+    - Language: ${userLanguage === 'es' ? 'SPANISH' : 'ENGLISH'}
+    - Descriptions: MAX 8 WORDS.
+    - JSON ONLY.
+    `;
+
+    try {
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: singleDaySchema,
+                temperature: 0.4
+            }
+        });
+
+        const data = JSON.parse(result.response.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+        return data.blocks || [];
+    } catch (e) {
+        console.error(`Day ${dayIndex} Generation Failed`, e);
+        // Return fallback empty blocks on error to allow partial plan? 
+        // Or throw to fail fast. Let's throw for now to ensure quality.
+        throw new Error(`Failed to generate workout for Day ${dayIndex}`);
+    }
+}
+
+
 export async function generateTrainingPlan(
     profile: UserProfileInput
 ): Promise<WeeklyPlan> {
-    const model = getPlanModel(); // Use comprehensive Pro model for plan generation
-
     const userLanguage = profile.language || 'en';
     const languageInstruction = userLanguage === 'es'
-        ? `CRITICAL: You MUST generate ALL content in SPANISH. Exercise names, descriptions, section labels, everything must be in Spanish.`
+        ? `CRITICAL: You MUST generate ALL content in SPANISH.`
         : `Generate all content in English.`;
 
-    console.log(`Generating plan in ${userLanguage.toUpperCase()} for ${profile.experienceLevel} level`);
+    console.log(`Starting Chained Plan Generation for ${profile.name}...`);
 
-    const prompt = `
-    You are an expert strength and conditioning coach.
-    Create a 1-week functional training plan (a repeating microcycle) for the following user.
-    The plan should be detailed and outputted as pure JSON.
-    
-    ${languageInstruction}
-    
-    User Profile:
-    - Name: ${profile.name || 'User'}
-    - Age: ${profile.age || 'N/A'}
-    - Weight: ${profile.weight ? profile.weight + 'kg' : 'N/A'}
-    - Height: ${profile.height ? profile.height + 'cm' : 'N/A'}
-    - Goal: ${profile.primaryGoal}
-    - Level: ${profile.experienceLevel}
-    - Days Per Week: ${profile.sessionsPerWeek} (You MUST generate exactly ${profile.sessionsPerWeek} workout days)
-    - Duration: ${profile.minutesPerSession} mins
-    - Equipment: ${profile.equipmentKeys.join(', ')}
-    - Limitations: ${profile.limitations.join(', ') || 'None'}
-    - Preferences: ${profile.stylePreferences?.circuitsPreference || 'Mixed'} circuits, ${profile.stylePreferences?.runningFinisherPreference || 'occasional'} to running.
+    // 1. Generate Skeleton
+    const skeleton = await generatePlanSkeleton(profile, languageInstruction);
+    console.log(`Skeleton generated: ${skeleton.days?.length} days`);
 
-    CRITICAL INSTRUCTIONS:
-    1. **Language**: ${userLanguage === 'es' ? 'ALL text must be in SPANISH (exercise names, descriptions, labels)' : 'ALL text must be in English'}
-    2. **Real Exercises Only**: Use standard, verifiable exercise names.
-    3. **Exact Frequency**: Generate exactly ${profile.sessionsPerWeek} workout days.
-    4. **Repeating Cycle**: This 1 week will be repeated.
-    5. **CONCISENESS**: Descriptions MUST be short (maximum 15 words). Notes should be empty unless safety-critical.
-    6. **Details**: Provide: name, movementPattern, mainMuscles, requiredEquipment, recommendedLevel, description, sets, reps, durationSeconds, restSeconds, notes.
-
-    Output Schema (JSON):
-    {
-      "totalWeeks": 1,
-      "days": [
-        {
-          "dayIndex": 1,
-          "label": "${userLanguage === 'es' ? 'Lunes' : 'Monday'}",
-          "focus": "${userLanguage === 'es' ? 'Fuerza de Cuerpo Completo' : 'Full Body Strength'}",
-          "blocks": [
-            {
-              "type": "warmup",
-              "label": "${userLanguage === 'es' ? 'Calentamiento' : 'Warm Up'}",
-              "exercises": [...]
-            },
-             {
-              "type": "main",
-              "label": "${userLanguage === 'es' ? 'Bloque Principal' : 'Strength Block'}",
-              "exercises": [...]
-            }
-          ]
-        }
-      ]
+    if (!skeleton.days || skeleton.days.length === 0) {
+        throw new Error("AI generated an empty schedule");
     }
-    
-    Ensure strict valid JSON format. Do not use code blocks.
-  `;
 
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-            responseMimeType: 'application/json',
-            // No strict schema, let the model generate freeform JSON based on instructions
-            maxOutputTokens: 8192,
-            temperature: 0.4,
-        }
+    // 2. Generate Days in Parallel
+    const dayPromises = skeleton.days.map(async (daySkeleton) => {
+        const blocks = await generateDayDetails(
+            profile,
+            daySkeleton.label,
+            daySkeleton.focus,
+            languageInstruction,
+            daySkeleton.dayIndex
+        );
+
+        return {
+            dayIndex: daySkeleton.dayIndex,
+            label: daySkeleton.label,
+            focus: daySkeleton.focus,
+            blocks: blocks
+        } as TrainingDay;
     });
 
-    const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!responseText) throw new Error("Failed to generate plan");
+    const fullDays = await Promise.all(dayPromises);
 
-    // Clean response of potential markdown
-    let cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    // 3. Post-Process Exercises (DB linking) as before
+    const finalPlan: WeeklyPlan = {
+        totalWeeks: skeleton.totalWeeks || 1,
+        days: fullDays.sort((a, b) => a.dayIndex - b.dayIndex)
+    };
 
-    // Sometimes models output text before json
-    const firstBrace = cleanJson.indexOf('{');
-    const lastBrace = cleanJson.lastIndexOf('}');
+    // Reuse existing DB logic here? Ideally refactor to helper function but we can inline for speed
+    const processedExercises = new Map<string, string>();
 
-    if (firstBrace !== -1 && lastBrace !== -1) {
-        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
-    }
-
-    let plan: any;
-    try {
-        plan = JSON.parse(cleanJson);
-    } catch (e) {
-        // Attempt to fix common JSON issues like unescaped newlines
-        try {
-            // aggressive cleanup for control characters that might be valid in text but invalid in JSON strings if unescaped
-            const fixedJson = cleanJson.replace(/[\u0000-\u001F]+/g, (match) => {
-                if (match === '\n' || match === '\r') return ''; // remove line breaks outside strings? No that breaks it.
-                // Actually standard JSON parsers hate unescaped newlines in strings.
-                // JSON.parse accepts newlines (whitespace) outside strings.
-                // The issue is likely unescaped newlines INSIDE strings or just bad characters.
-                return '';
-            });
-            plan = JSON.parse(fixedJson);
-        } catch (e2) {
-            console.error("Failed to parse JSON. Raw response length:", cleanJson.length);
-            console.error("End of response:", cleanJson.substring(cleanJson.length - 200));
-            throw new Error("Invalid JSON response from AI");
-        }
-    }
-
-    if (!plan.days || !Array.isArray(plan.days)) {
-        console.error("Invalid plan structure:", plan);
-        // Attempt to unwrap if wrapped in a key
-        if (plan.plan && Array.isArray(plan.plan.days)) {
-            plan = plan.plan;
-        } else {
-            throw new Error("Generated plan missing 'days' array");
-        }
-    }
-
-    // Process Exercises: Check existence, Create if new, Link IDs
-    const processedExercises = new Map<string, string>(); // Name -> ID
-
-    for (const day of plan.days) {
+    for (const day of finalPlan.days) {
         for (const block of day.blocks) {
+            // Just cast to any for strict schema mismatch with internal type (some optional fields)
+            // But schema matches TrainingBlockExercise structure pretty well.
             for (const exData of block.exercises as any[]) {
                 const normalizedName = exData.name.trim();
-                // Deterministic ID
                 const id = normalizedName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                exData.exerciseId = id; // Inject ID
 
-                exData.exerciseId = id; // Link ID to plan object
-
-                // Sanitize mainMuscles to ensure it's always an array (model sometimes returns a string)
+                // Sanitize mainMuscles array
                 if (!Array.isArray(exData.mainMuscles)) {
                     exData.mainMuscles = typeof exData.mainMuscles === 'string' ? [exData.mainMuscles] : [];
                 }
 
                 if (!processedExercises.has(id)) {
-                    // Check DB
                     const docRef = db.collection('exercises').doc(id);
+                    // Minimal check - we can optimize this later
                     const docSnap = await docRef.get();
-
                     if (!docSnap.exists) {
-                        // Create new exercise
-                        console.log(`Creating new exercise: ${normalizedName} `);
+                        // Note: Schema doesn't strictly force description/level, so we default
                         await docRef.set({
                             id: id,
                             name: exData.name,
@@ -170,5 +251,5 @@ export async function generateTrainingPlan(
         }
     }
 
-    return plan;
+    return finalPlan;
 }

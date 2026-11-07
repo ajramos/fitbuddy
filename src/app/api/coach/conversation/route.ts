@@ -14,16 +14,22 @@ export async function GET(req: Request) {
     const userId = session.user.email;
 
     try {
-        // Find most recent conversation (filter planId in code to avoid composite index)
+        // Find most recent conversation (fetch all and sort in code to avoid composite index)
         const conversationsRef = db.collection('conversations');
         const snapshot = await conversationsRef
             .where('userId', '==', userId)
-            .orderBy('updatedAt', 'desc')
-            .limit(10)  // Get last 10 to filter in code
+            .limit(20)  // Get last 20 to sort in code
             .get();
 
-        // Find first conversation without planId
-        const activeDoc = snapshot.docs.find(doc => !doc.data().planId);
+        // Sort by updatedAt in memory and find first without planId
+        const sortedDocs = snapshot.docs
+            .map(doc => ({
+                doc,
+                updatedAt: doc.data().updatedAt?.toDate?.()?.getTime() || 0
+            }))
+            .sort((a, b) => b.updatedAt - a.updatedAt);
+
+        const activeDoc = sortedDocs.find(item => !item.doc.data().planId)?.doc;
 
         if (activeDoc) {
             const data = activeDoc.data();

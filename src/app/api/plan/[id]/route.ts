@@ -5,14 +5,14 @@ import { TrainingPlanDocument } from "@/lib/db/schema";
 import { NextResponse } from "next/server";
 
 // GET - Get a specific plan by ID
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user?.email) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.email;
-    const planId = params.id;
+    const { id: planId } = await context.params;
 
     try {
         const doc = await db.collection('plans').doc(planId).get();

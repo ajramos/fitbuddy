@@ -8,7 +8,7 @@ const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
 
 // Multi-Model Strategy: Fast model for conversation, comprehensive model for plan generation
 const conversationModelName = process.env.VERTEX_CONVERSATION_MODEL || 'gemini-2.5-flash';
-const planModelName = process.env.VERTEX_PLAN_MODEL || 'gemini-2.5-pro';
+const planModelName = process.env.VERTEX_PLAN_MODEL || 'gemini-1.5-flash';
 
 // Validation against STANDARDS.md
 if (!conversationModelName || !planModelName) {

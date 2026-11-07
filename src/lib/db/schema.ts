@@ -45,6 +45,7 @@ export interface TrainingPlanDocument {
     id: string;
     userId: string;
     title: string;
+    userNotes?: string;
     totalWeeks: number;
     days: {
         dayIndex: number;

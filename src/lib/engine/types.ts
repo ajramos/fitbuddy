@@ -70,5 +70,6 @@ export interface TrainingDay {
 
 export interface WeeklyPlan {
     totalWeeks: number;
+    userNotes?: string;
     days: TrainingDay[];
 }

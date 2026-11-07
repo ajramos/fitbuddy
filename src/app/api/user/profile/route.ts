@@ -19,8 +19,12 @@ export async function POST(req: Request) {
             height,
             primaryGoal,
             experienceLevel,
+            sessionsPerWeek,
+            minutesPerSession,
             equipment,
-            limitations
+            limitations,
+            circuitsPreference,
+            runningFinisherPreference
         } = data;
 
         // Basic sanitization/validation could go here.
@@ -39,6 +43,8 @@ export async function POST(req: Request) {
         if (height) updateData.height = Number(height);
         if (primaryGoal) updateData.primaryGoal = primaryGoal;
         if (experienceLevel) updateData.experienceLevel = experienceLevel;
+        if (sessionsPerWeek) updateData.sessionsPerWeek = Number(sessionsPerWeek);
+        if (minutesPerSession) updateData.minutesPerSession = Number(minutesPerSession);
 
         // Handle array fields which might come as comma-separated strings from a simple text area
         if (typeof equipment === 'string') {
@@ -51,6 +57,14 @@ export async function POST(req: Request) {
             updateData.limitations = limitations.split(',').map(s => s.trim()).filter(Boolean);
         } else if (Array.isArray(limitations)) {
             updateData.limitations = limitations;
+        }
+
+        // Handle style preferences
+        if (circuitsPreference || runningFinisherPreference) {
+            updateData.stylePreferences = {
+                circuitsPreference: circuitsPreference || 'neutral',
+                runningFinisherPreference: runningFinisherPreference || 'no'
+            };
         }
 
         await db.collection('users').doc(session.user.email).set(updateData, { merge: true });

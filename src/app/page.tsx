@@ -1,74 +1,135 @@
-
 import { LoginButton } from "@/components/auth/login-button";
 import { auth } from "@/auth";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { Dumbbell, MessageSquare, Calendar, TrendingUp } from "lucide-react";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
+export default async function Home() {
   const session = await auth();
 
-  // If already logged in, maybe show "Go to Coach" instead of Login
-  // Or redirect if desired? Let's show a "Go to Coach" button.
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-slate-50">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          FitBuddy AI
-        </p>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-to-br before:from-transparent before:to-blue-500 before:opacity-10 before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-to-t after:from-sky-900 after:via-[#0141ff] after:opacity-40 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <h1 className="text-5xl font-bold text-slate-900 mb-4 text-center">
-          Your Personal AI <br /> Training Coach
-        </h1>
-      </div>
-
-      <p className="mb-8 text-xl text-slate-600 max-w-2xl text-center">
-        Get a fully personalized functional training plan by just talking to your coach.
-        Tailored to your equipment, goals, and schedule.
-      </p>
-
-      <div className="flex gap-4">
-        {session ? (
-          <Link href="/coach" className="bg-green-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-green-700 transition">
-            Talk to Coach
-          </Link>
-        ) : (
-          <LoginButton />
-        )}
-      </div>
-
-      <div className="mt-16 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-3 lg:text-left gap-8">
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100/50">
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Tell your goals
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            "I want to lose fat and use my kettlebells at home."
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      {/* Header */}
+      <header className="absolute top-0 left-0 right-0 z-10 p-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white font-bold text-2xl">
+            <Dumbbell className="w-8 h-8 text-blue-400" />
+            <span>FitBuddy AI</span>
+          </div>
+          {session && (
+            <Link
+              href="/coach"
+              className="text-white/80 hover:text-white transition"
+            >
+              Go to Dashboard →
+            </Link>
+          )}
         </div>
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100/50">
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Get a Plan
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Receive a detailed weekly training split with exercises.
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-20">
+        {/* Gradient blob effects */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-700" />
+
+        <div className="relative z-10 max-w-5xl mx-auto text-center">
+          <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            Your Personal AI
+            <br />
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 text-transparent bg-clip-text">
+              Training Coach
+            </span>
+          </h1>
+
+          <p className="text-xl md:text-2xl text-slate-300 mb-12 max-w-3xl mx-auto">
+            Get a fully personalized functional training plan by just talking to your coach.
+            <br className="hidden md:block" />
+            Tailored to your equipment, goals, and schedule.
           </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {session ? (
+              <Link
+                href="/coach"
+                className="group bg-gradient-to-r from-blue-600 to-blue-700 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 hover:scale-105 transform"
+              >
+                Talk to Coach
+                <MessageSquare className="inline-block ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            ) : (
+              <>
+                <LoginButton />
+                <Link
+                  href="#features"
+                  className="bg-white/10 backdrop-blur text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-white/20 transition border border-white/20"
+                >
+                  Learn More
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100/50">
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Track Progress
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="relative py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold text-white text-center mb-16">
+            How It Works
           </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Adapt the plan as you improve or get bored.
-          </p>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="group bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-blue-500/50 transition-all hover:scale-105 transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <MessageSquare className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Tell Your Goals
+              </h3>
+              <p className="text-slate-300 leading-relaxed">
+                "I want to lose fat and use my kettlebells at home 3 times a week."
+                Just chat naturally with your AI coach.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="group bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-purple-500/50 transition-all hover:scale-105 transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Calendar className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Get a Plan
+              </h3>
+              <p className="text-slate-300 leading-relaxed">
+                Receive a detailed weekly training split with exercises, sets, reps,
+                and rest periods. Perfectly tailored to you.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="group bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-green-500/50 transition-all hover:scale-105 transform">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                Track Progress
+              </h3>
+              <p className="text-slate-300 leading-relaxed">
+                Adapt your plan as you improve or change goals. Your coach evolves
+                with you.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative py-12 px-6 border-t border-white/10">
+        <div className="max-w-7xl mx-auto text-center text-slate-400">
+          <p>© 2024 FitBuddy AI. Your personal training companion.</p>
+        </div>
+      </footer>
     </main>
   );
 }

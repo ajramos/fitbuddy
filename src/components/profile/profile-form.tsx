@@ -24,8 +24,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         height: initialData.height || "",
         primaryGoal: initialData.primaryGoal || "muscle_gain",
         experienceLevel: initialData.experienceLevel || "beginner",
+        sessionsPerWeek: initialData.sessionsPerWeek || "",
+        minutesPerSession: initialData.minutesPerSession || "",
         equipment: initialData.equipmentKeys?.join(", ") || "",
         limitations: initialData.limitations?.join(", ") || "",
+        circuitsPreference: initialData.stylePreferences?.circuitsPreference || "neutral",
+        runningFinisherPreference: initialData.stylePreferences?.runningFinisherPreference || "no",
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -169,6 +173,35 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">{dict.profile.sessionsPerWeek}</label>
+                        <input
+                            type="number"
+                            name="sessionsPerWeek"
+                            value={formData.sessionsPerWeek}
+                            onChange={handleChange}
+                            min="1"
+                            max="7"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="e.g. 3"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">{dict.profile.minutesPerSession}</label>
+                        <input
+                            type="number"
+                            name="minutesPerSession"
+                            value={formData.minutesPerSession}
+                            onChange={handleChange}
+                            min="15"
+                            max="180"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="e.g. 45"
+                        />
+                    </div>
+                </div>
+
                 <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700">{dict.profile.equipment}</label>
                     <textarea
@@ -191,6 +224,54 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                         placeholder="e.g. Lower back pain, Left shoulder click"
                     />
+                </div>
+
+                {/* Style Preferences Section */}
+                <div className="border-b border-gray-100 pb-4 pt-6 mb-4">
+                    <h2 className="text-xl font-bold text-slate-800">{dict.profile.preferencesTitle}</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">{dict.profile.circuitsLabel}</label>
+                        <div className="flex flex-col gap-2">
+                            {(['love', 'neutral', 'hate'] as const).map((value) => (
+                                <label key={value} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="circuitsPreference"
+                                        value={value}
+                                        checked={formData.circuitsPreference === value}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-slate-700">
+                                        {value === 'love' ? dict.profile.circuitsLove : value === 'neutral' ? dict.profile.circuitsNeutral : dict.profile.circuitsHate}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700">{dict.profile.runningFinisherLabel}</label>
+                        <div className="flex flex-col gap-2">
+                            {(['yes', 'conditional', 'no'] as const).map((value) => (
+                                <label key={value} className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="runningFinisherPreference"
+                                        value={value}
+                                        checked={formData.runningFinisherPreference === value}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-slate-700">
+                                        {value === 'yes' ? dict.profile.runningFinisherYes : value === 'conditional' ? dict.profile.runningFinisherConditional : dict.profile.runningFinisherNo}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </form>
 
