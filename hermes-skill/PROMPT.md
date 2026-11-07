@@ -1,6 +1,7 @@
 Quiero que instales un skill nuevo llamado `fitbuddy`: mi entrenador personal de entrenamiento funcional.
 
 Pasos:
+0. FitBuddy va en su **propio hilo** dedicado (créalo si tu canal lo permite, p.ej. un tema "FitBuddy" en Telegram). Todo lo de entreno, incluidas las tareas programadas, va a ese hilo y no al chat general.
 1. Crea la carpeta del skill en tu directorio de skills (`~/.hermes/skills/fitbuddy/`, o el que uses) con EXACTAMENTE los archivos y contenidos de abajo, sin resumir ni reescribir nada.
 2. Crea la carpeta de datos `~/.fitbuddy/` con `plans/`, copia `templates/log.csv` a `~/.fitbuddy/log.csv` y crea un `~/.fitbuddy/notes.md` vacío. NO crees `profile.md`: se crea en el onboarding.
 3. Carga el skill y arranca el onboarding conmigo (de 1 a 2 preguntas por mensaje).
@@ -113,6 +114,9 @@ del perfil (objetivo, días, material, lesiones) y genera el bloque siguiente (f
 - Si dos semanas seguidas no progresa un principal → revisa ejecución/sueño y cambia de variante.
 
 ## Estilo de respuesta
+
+- FitBuddy vive en **su propio hilo** (conversación/tema dedicado). Todo lo de entreno, incluidas las
+  tareas programadas, se envía ahí. Si el usuario habla de entreno en otro hilo, responde breve y pídele seguir en el de FitBuddy.
 
 - Español, directo, sin relleno ni frases motivacionales vacías.
 - Pensado para leerse en el móvil: listas cortas, una línea por ejercicio
